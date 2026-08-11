@@ -19,19 +19,21 @@ public class PricingService {
 
     @PostConstruct
     public void initDefaultPrices() {
-        try {
-            String[] blocks = {"C Block", "R Block", "L Block"};
-            for (String block : blocks) {
-                if (campusBlockRepository.findByName(block) == null) {
-                    campusBlockRepository.save(new com.saipraveen.login_registration.entity.CampusBlock(block));
+        java.util.concurrent.CompletableFuture.runAsync(() -> {
+            try {
+                String[] blocks = {"C Block", "R Block", "L Block"};
+                for (String block : blocks) {
+                    if (campusBlockRepository.findByName(block) == null) {
+                        campusBlockRepository.save(new com.saipraveen.login_registration.entity.CampusBlock(block));
+                    }
+                    initializeBlockPrice(block, "BW", 2.0);
+                    initializeBlockPrice(block, "COLOR", 5.0);
+                    initializeBlockPrice(block, "DUPLEX", 2.0);
                 }
-                initializeBlockPrice(block, "BW", 2.0);
-                initializeBlockPrice(block, "COLOR", 5.0);
-                initializeBlockPrice(block, "DUPLEX", 2.0);
+            } catch (Exception e) {
+                System.err.println("Warning: Default pricing initialization deferred: " + e.getMessage());
             }
-        } catch (Exception e) {
-            System.err.println("Warning: Default pricing initialization deferred: " + e.getMessage());
-        }
+        });
     }
 
     private void initializeBlockPrice(String block, String printType, Double price) {

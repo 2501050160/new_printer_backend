@@ -74,23 +74,25 @@ private PdfFileRepository repository;
 
     @jakarta.annotation.PostConstruct
     public void initSystemSettings() {
-        try {
-            initSetting("referral_enabled", "true");
-            initSetting("referral_referrer_amount", "10.0");
-            initSetting("referral_referee_amount", "5.0");
-            initSetting("referral_popup_enabled", "true");
-            initSetting("referral_popup_message", "Welcome! Share your referral code with friends. They get Rs. 5 and you get Rs. 10 on their first checkout!");
-            initSetting("ad_enabled", "true");
-            initSetting("ad_text", "📢 REFERRAL SPECIAL: Refer your friends using your unique Referral Code shown below and earn ₹10 instantly when they checkout! They get ₹5 off on their first order!");
-            initSetting("offpeak_discount_percent", "15.0");
-            initSetting("offpeak_start_hour", "21.0");
-            initSetting("offpeak_end_hour", "7.0");
-            initSetting("offpeak_morning_start", "7.0");
-            initSetting("offpeak_morning_end", "9.0");
-            systemSettingService.setSetting("admin_sms_phone", "9494189664");
-        } catch (Exception e) {
-            System.err.println("Warning: Default system settings initialization deferred: " + e.getMessage());
-        }
+        java.util.concurrent.CompletableFuture.runAsync(() -> {
+            try {
+                initSetting("referral_enabled", "true");
+                initSetting("referral_referrer_amount", "10.0");
+                initSetting("referral_referee_amount", "5.0");
+                initSetting("referral_popup_enabled", "true");
+                initSetting("referral_popup_message", "Welcome! Share your referral code with friends. They get Rs. 5 and you get Rs. 10 on their first checkout!");
+                initSetting("ad_enabled", "true");
+                initSetting("ad_text", "📢 REFERRAL SPECIAL: Refer your friends using your unique Referral Code shown below and earn ₹10 instantly when they checkout! They get ₹5 off on their first order!");
+                initSetting("offpeak_discount_percent", "15.0");
+                initSetting("offpeak_start_hour", "21.0");
+                initSetting("offpeak_end_hour", "7.0");
+                initSetting("offpeak_morning_start", "7.0");
+                initSetting("offpeak_morning_end", "9.0");
+                systemSettingService.setSetting("admin_sms_phone", "9494189664");
+            } catch (Exception e) {
+                System.err.println("Warning: Default system settings initialization deferred: " + e.getMessage());
+            }
+        });
     }
 
     private void initSetting(String key, String defaultValue) {
