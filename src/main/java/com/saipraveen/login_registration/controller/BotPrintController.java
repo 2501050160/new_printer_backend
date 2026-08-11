@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Random;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -52,7 +53,7 @@ public class BotPrintController {
             @RequestParam(value = "blockLocation", required = false) String blockLocation,
             @RequestParam(value = "printType", defaultValue = "BW") String printType,
             @RequestParam(value = "selectedPages", defaultValue = "ALL") String selectedPages,
-            @RequestParam(value = "doubleSided", defaultValue = "false") boolean doubleSided,
+            @RequestParam(value = "doubleSided", defaultValue = "false") Boolean doubleSided,
             @RequestParam(value = "copies", defaultValue = "1") Integer copies
     ) {
         try {
