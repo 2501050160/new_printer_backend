@@ -35,16 +35,25 @@ public class BotPrintController {
     @org.springframework.beans.factory.annotation.Value("${app.frontend.url:https://cloudprint.website}")
     private String frontendUrl;
 
-    @PostMapping("/direct-upload")
-    public ResponseEntity<?> directUploadFromBot(
+    private String sanitizePhoneNumber(String raw) {
+        if (raw == null) return "0000000000";
+        String clean = raw.replaceAll("[^0-9]", "");
+        if (clean.startsWith("91") && clean.length() == 12) {
+            clean = clean.substring(2);
+        }
+        return clean.isEmpty() ? "0000000000" : clean;
+    }
+
+    @PostMapping(value = "/direct-upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> directUploadAndOrder(
             @RequestParam("file") MultipartFile file,
-            @RequestParam(required = false, defaultValue = "Student Bot User") String customerName,
-            @RequestParam(required = false, defaultValue = "WhatsApp/Telegram User") String phoneNumber,
-            @RequestParam(required = false, defaultValue = "Block A") String blockLocation,
-            @RequestParam(required = false, defaultValue = "BW") String printType,
-            @RequestParam(required = false, defaultValue = "ALL") String selectedPages,
-            @RequestParam(required = false, defaultValue = "false") Boolean doubleSided,
-            @RequestParam(required = false, defaultValue = "1") Integer copies
+            @RequestParam(value = "customerName", required = false) String customerName,
+            @RequestParam(value = "phoneNumber", required = false) String phoneNumber,
+            @RequestParam(value = "blockLocation", required = false) String blockLocation,
+            @RequestParam(value = "printType", defaultValue = "BW") String printType,
+            @RequestParam(value = "selectedPages", defaultValue = "ALL") String selectedPages,
+            @RequestParam(value = "doubleSided", defaultValue = "false") boolean doubleSided,
+            @RequestParam(value = "copies", defaultValue = "1") Integer copies
     ) {
         try {
             if (file == null || file.isEmpty()) {
@@ -58,14 +67,14 @@ public class BotPrintController {
                 return ResponseEntity.badRequest().body("⚠️ Kiosk Offline: " + avail.getMessage());
             }
 
-            // Ensure each unique WhatsApp phone number gets its OWN privacy-protected User account in DB
-            String cleanPhone = phoneNumber != null ? phoneNumber.replaceAll("[^0-9]", "") : "0000000000";
-            if (cleanPhone.isEmpty()) cleanPhone = "0000000000";
+            // Ensure each unique WhatsApp phone number gets its OWN User account in DB
+            String cleanPhone = sanitizePhoneNumber(phoneNumber);
             String waEmail = "wa_" + cleanPhone + "@whatsapp.cloudprint";
 
-            String fullNameWithPhone = customerName != null && !customerName.isEmpty() 
-                ? (customerName.contains(cleanPhone) ? customerName : customerName + " (" + cleanPhone + ")") 
-                : ("WhatsApp User (" + cleanPhone + ")");
+            String displayName = customerName != null && !customerName.isEmpty()
+                ? customerName.replaceAll("\\s*\\(\\d+\\)", "").trim()
+                : "Student";
+            String fullNameWithPhone = displayName + " (+91 " + cleanPhone + ")";
 
             com.saipraveen.login_registration.entity.User user = userRepository.findByEmail(waEmail);
             if (user == null) {
@@ -76,10 +85,13 @@ public class BotPrintController {
                 user.setWalletBalance(0.0);
                 user.setReferralCode("WA_" + cleanPhone);
                 user = userRepository.save(user);
+            } else if (!user.getName().contains("+91 " + cleanPhone)) {
+                user.setName(fullNameWithPhone);
+                user = userRepository.save(user);
             }
 
             // Save PDF to DB linked to the unique WhatsApp User ID
-            PdfFile pdf = pdfFileService.savePdf(file, user.getId(), customerName, blockLocation);
+            PdfFile pdf = pdfFileService.savePdf(file, user.getId(), fullNameWithPhone, blockLocation);
 
             // Update order details to generate real Order ID
             PdfFile updated = pdfFileService.updateOrder(
@@ -137,7 +149,7 @@ public class BotPrintController {
 
     @org.springframework.web.bind.annotation.GetMapping("/user-balance")
     public ResponseEntity<?> getUserBalance(@RequestParam String phoneNumber) {
-        String cleanPhone = phoneNumber != null ? phoneNumber.replaceAll("[^0-9]", "") : "0000000000";
+        String cleanPhone = sanitizePhoneNumber(phoneNumber);
         String waEmail = "wa_" + cleanPhone + "@whatsapp.cloudprint";
         com.saipraveen.login_registration.entity.User user = userRepository.findByEmail(waEmail);
         double balance = (user != null && user.getWalletBalance() != null) ? user.getWalletBalance() : 0.0;
@@ -153,12 +165,12 @@ public class BotPrintController {
             @RequestParam String couponCode
     ) {
         Map<String, Object> res = new HashMap<>();
-        String cleanPhone = phoneNumber != null ? phoneNumber.replaceAll("[^0-9]", "") : "0000000000";
+        String cleanPhone = sanitizePhoneNumber(phoneNumber);
         String waEmail = "wa_" + cleanPhone + "@whatsapp.cloudprint";
         com.saipraveen.login_registration.entity.User user = userRepository.findByEmail(waEmail);
         if (user == null) {
             user = new com.saipraveen.login_registration.entity.User();
-            user.setName(cleanPhone);
+            user.setName("Student (+91 " + cleanPhone + ")");
             user.setEmail(waEmail);
             user.setPassword("WA_BOT_USER_NOPASS");
             user.setWalletBalance(0.0);
@@ -222,7 +234,7 @@ public class BotPrintController {
             @RequestParam String phoneNumber
     ) {
         Map<String, Object> res = new HashMap<>();
-        String cleanPhone = phoneNumber != null ? phoneNumber.replaceAll("[^0-9]", "") : "0000000000";
+        String cleanPhone = sanitizePhoneNumber(phoneNumber);
         String waEmail = "wa_" + cleanPhone + "@whatsapp.cloudprint";
         com.saipraveen.login_registration.entity.User user = userRepository.findByEmail(waEmail);
         if (user == null) {
