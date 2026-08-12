@@ -25,10 +25,48 @@ public class CouponController {
     private CouponService service;
 
     @PostMapping("/create")
-    public ResponseEntity<?> createCoupon(@RequestBody(required = false) Coupon coupon) {
+    public ResponseEntity<?> createCoupon(@RequestBody(required = false) Map<String, Object> body) {
         try {
-            if (coupon == null) {
-                coupon = new Coupon();
+            Coupon coupon = new Coupon();
+            if (body != null) {
+                if (body.get("id") != null) {
+                    try {
+                        coupon.setId(Long.parseLong(body.get("id").toString()));
+                    } catch (Exception ignored) {}
+                }
+                if (body.get("couponCode") != null) {
+                    coupon.setCouponCode(body.get("couponCode").toString().trim().toUpperCase());
+                }
+                if (body.get("discountPercentage") != null) {
+                    try {
+                        coupon.setDiscountPercentage(Double.parseDouble(body.get("discountPercentage").toString()));
+                    } catch (Exception ignored) {}
+                }
+                if (body.get("discountAmount") != null) {
+                    try {
+                        coupon.setDiscountAmount(Double.parseDouble(body.get("discountAmount").toString()));
+                    } catch (Exception ignored) {}
+                }
+                if (body.get("maxUses") != null) {
+                    try {
+                        coupon.setMaxUses(Integer.parseInt(body.get("maxUses").toString()));
+                    } catch (Exception ignored) {}
+                }
+                if (body.get("active") != null) {
+                    coupon.setActive(Boolean.parseBoolean(body.get("active").toString()));
+                }
+                if (body.get("expiryDate") != null && !body.get("expiryDate").toString().trim().isEmpty()) {
+                    try {
+                        String dateStr = body.get("expiryDate").toString().trim();
+                        if (dateStr.contains("T")) {
+                            dateStr = dateStr.split("T")[0];
+                        }
+                        coupon.setExpiryDate(LocalDate.parse(dateStr));
+                    } catch (Exception e) {
+                        System.err.println("Warning: Invalid date format for coupon expiryDate: " + body.get("expiryDate"));
+                        coupon.setExpiryDate(LocalDate.now().plusDays(30));
+                    }
+                }
             }
             Coupon saved = service.createCoupon(coupon);
             return ResponseEntity.ok(saved);

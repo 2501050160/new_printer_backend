@@ -30,12 +30,34 @@ public class CouponService {
             coupon.setCouponCode(coupon.getCouponCode().trim().toUpperCase());
         }
 
-        if (coupon.getDiscountPercentage() == null && coupon.getDiscountAmount() == null) {
-            coupon.setDiscountPercentage(100.0);
+        Coupon existing = repository.findByCouponCodeIgnoreCase(coupon.getCouponCode());
+        if (existing == null) {
+            existing = repository.findByCouponCode(coupon.getCouponCode());
         }
 
-        if (coupon.getDiscountPercentage() != null && coupon.getDiscountPercentage() > 100.0) {
-            coupon.setDiscountPercentage(100.0);
+        if (existing != null && (coupon.getId() == null || !existing.getId().equals(coupon.getId()))) {
+            if (coupon.getDiscountPercentage() != null) {
+                existing.setDiscountPercentage(Math.min(coupon.getDiscountPercentage(), 95.0));
+            }
+            if (coupon.getDiscountAmount() != null) {
+                existing.setDiscountAmount(coupon.getDiscountAmount());
+            }
+            if (coupon.getExpiryDate() != null) {
+                existing.setExpiryDate(coupon.getExpiryDate());
+            }
+            if (coupon.getMaxUses() != null) {
+                existing.setMaxUses(coupon.getMaxUses());
+            }
+            existing.setActive(coupon.getActive() != null ? coupon.getActive() : true);
+            return repository.save(existing);
+        }
+
+        if (coupon.getDiscountPercentage() == null && coupon.getDiscountAmount() == null) {
+            coupon.setDiscountPercentage(10.0);
+        }
+
+        if (coupon.getDiscountPercentage() != null && coupon.getDiscountPercentage() > 95.0) {
+            coupon.setDiscountPercentage(95.0);
         }
 
         if (coupon.getExpiryDate() == null) {
