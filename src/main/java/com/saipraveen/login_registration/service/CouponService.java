@@ -25,9 +25,9 @@ public class CouponService {
         }
 
         if (coupon.getCouponCode() == null || coupon.getCouponCode().trim().isEmpty()) {
-            coupon.setCouponCode(String.valueOf(100000 + new java.util.Random().nextInt(900000)));
+            coupon.setCouponCode("PRINT" + (1000 + new java.util.Random().nextInt(9000)));
         } else {
-            coupon.setCouponCode(coupon.getCouponCode().trim());
+            coupon.setCouponCode(coupon.getCouponCode().trim().toUpperCase());
         }
 
         if (coupon.getDiscountPercentage() == null && coupon.getDiscountAmount() == null) {
@@ -39,10 +39,10 @@ public class CouponService {
         }
 
         if (coupon.getExpiryDate() == null) {
-            coupon.setExpiryDate(LocalDate.now().plusDays(7));
+            coupon.setExpiryDate(LocalDate.now().plusDays(30));
         }
 
-        if (coupon.getMaxUses() == null) {
+        if (coupon.getMaxUses() == null || coupon.getMaxUses() < 1) {
             coupon.setMaxUses(1);
         }
 
@@ -59,7 +59,11 @@ public class CouponService {
 
     @Transactional
     public List<Coupon> getAllCoupons() {
-        autoDeleteInvalidCoupons();
+        try {
+            autoDeleteInvalidCoupons();
+        } catch (Exception e) {
+            System.err.println("Warning in autoDeleteInvalidCoupons: " + e.getMessage());
+        }
         try {
             return repository.findAll();
         } catch (Exception e) {
@@ -74,7 +78,7 @@ public class CouponService {
             throw new RuntimeException("Coupon Code is required");
         }
 
-        String cleanCode = couponCode.trim();
+        String cleanCode = couponCode.trim().toUpperCase();
         Coupon coupon = repository.findByCouponCodeIgnoreCase(cleanCode);
         if (coupon == null) {
             coupon = repository.findByCouponCode(cleanCode);
@@ -107,7 +111,7 @@ public class CouponService {
             throw new RuntimeException("Coupon Code is required");
         }
 
-        String cleanCode = couponCode.trim();
+        String cleanCode = couponCode.trim().toUpperCase();
         Coupon coupon = repository.findByCouponCodeIgnoreCase(cleanCode);
         if (coupon == null) {
             coupon = repository.findByCouponCode(cleanCode);

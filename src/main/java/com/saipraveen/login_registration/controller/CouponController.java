@@ -1,5 +1,8 @@
 package com.saipraveen.login_registration.controller;
 
+import java.util.Collections;
+import java.util.Map;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -22,71 +25,54 @@ public class CouponController {
     private CouponService service;
 
     @PostMapping("/create")
-    public ResponseEntity<?> createCoupon(
-
-            @RequestBody Coupon coupon
-
-    ) {
-
-        return ResponseEntity.ok(
-
-                service.createCoupon(
-                        coupon
-                )
-        );
+    public ResponseEntity<?> createCoupon(@RequestBody(required = false) Coupon coupon) {
+        try {
+            if (coupon == null) {
+                coupon = new Coupon();
+            }
+            Coupon saved = service.createCoupon(coupon);
+            return ResponseEntity.ok(saved);
+        } catch (Exception e) {
+            System.err.println("Error in createCoupon: " + e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage() != null ? e.getMessage() : "Failed to create coupon"));
+        }
     }
 
     @GetMapping("/all")
     public ResponseEntity<?> getCoupons() {
-
-        return ResponseEntity.ok(
-
-                service.getAllCoupons()
-        );
+        try {
+            return ResponseEntity.ok(service.getAllCoupons());
+        } catch (Exception e) {
+            System.err.println("Error in getCoupons: " + e.getMessage());
+            return ResponseEntity.ok(Collections.emptyList());
+        }
     }
 
     @GetMapping("/validate")
-    public ResponseEntity<?> validateCoupon(
-
-            @RequestParam String couponCode
-
-    ) {
-
-        return ResponseEntity.ok(
-
-                service.validateCoupon(
-                        couponCode
-                )
-        );
+    public ResponseEntity<?> validateCoupon(@RequestParam String couponCode) {
+        try {
+            return ResponseEntity.ok(service.validateCoupon(couponCode));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage() != null ? e.getMessage() : "Invalid coupon"));
+        }
     }
 
     @PostMapping("/use")
-public ResponseEntity<?> useCoupon(
+    public ResponseEntity<?> useCoupon(@RequestParam String couponCode) {
+        try {
+            return ResponseEntity.ok(service.useCoupon(couponCode));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage() != null ? e.getMessage() : "Failed to use coupon"));
+        }
+    }
 
-        @RequestParam String couponCode
-
-) {
-
-    return ResponseEntity.ok(
-
-            service.useCoupon(
-                    couponCode
-            )
-    );
-}
-
-@PostMapping("/delete")
-public ResponseEntity<?> deleteCoupon(
-
-        @RequestParam Long id
-
-) {
-
-    service.deleteCoupon(id);
-
-    return ResponseEntity.ok(
-            "Coupon Deleted"
-    );
-}
-
+    @PostMapping("/delete")
+    public ResponseEntity<?> deleteCoupon(@RequestParam Long id) {
+        try {
+            service.deleteCoupon(id);
+            return ResponseEntity.ok(Map.of("message", "Coupon Deleted"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage() != null ? e.getMessage() : "Failed to delete coupon"));
+        }
+    }
 }

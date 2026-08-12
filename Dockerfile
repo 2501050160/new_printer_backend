@@ -9,8 +9,7 @@ WORKDIR /app
 COPY . .
 
 RUN chmod +x mvnw
-# Build with minimal memory allocation during packaging
-RUN MAVEN_OPTS="-Xmx256m -XX:+UseSerialGC" ./mvnw clean package -DskipTests
+RUN ./mvnw clean package -DskipTests
 
 # ----------------- Stage 2: Ultra-Lean Runtime -----------------
 FROM eclipse-temurin:17-jre-alpine
@@ -23,8 +22,7 @@ COPY --from=builder /app/credentials ./credentials
 
 EXPOSE 8080
 
-# Environment variables for low-memory container execution
-ENV JAVA_OPTS="-Xmx256m -Xms128m -Xss512k -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -XX:CICompilerCount=2 -Djava.security.egd=file:/dev/./urandom"
+# Conflict-free low-memory JVM options (Avoids multiple GC collision with JAVA_TOOL_OPTIONS)
+ENV JAVA_OPTS="-Xmx256m -Xms128m -Xss512k -XX:MaxMetaspaceSize=128m -XX:TieredStopAtLevel=1 -XX:CICompilerCount=2 -Djava.security.egd=file:/dev/./urandom"
 
-# Launch Spring Boot with strict memory caps (Keeps memory at ~200MB-260MB, well below Render 512MB limit)
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
