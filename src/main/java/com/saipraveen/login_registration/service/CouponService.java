@@ -49,6 +49,9 @@ public class CouponService {
                 existing.setMaxUses(coupon.getMaxUses());
             }
             existing.setActive(coupon.getActive() != null ? coupon.getActive() : true);
+            if (existing.getUsedCount() == null) {
+                existing.setUsedCount(0);
+            }
             return repository.save(existing);
         }
 
@@ -65,7 +68,7 @@ public class CouponService {
         }
 
         if (coupon.getMaxUses() == null || coupon.getMaxUses() < 1) {
-            coupon.setMaxUses(1);
+            coupon.setMaxUses(100);
         }
 
         if (coupon.getUsedCount() == null) {
@@ -86,12 +89,7 @@ public class CouponService {
         } catch (Exception e) {
             System.err.println("Warning in autoDeleteInvalidCoupons: " + e.getMessage());
         }
-        try {
-            return repository.findAll();
-        } catch (Exception e) {
-            System.err.println("Error fetching all coupons: " + e.getMessage());
-            return new ArrayList<>();
-        }
+        return repository.findAll();
     }
 
     @Transactional
@@ -99,31 +97,23 @@ public class CouponService {
         if (couponCode == null || couponCode.trim().isEmpty()) {
             throw new RuntimeException("Coupon Code is required");
         }
-
         String cleanCode = couponCode.trim().toUpperCase();
         Coupon coupon = repository.findByCouponCodeIgnoreCase(cleanCode);
         if (coupon == null) {
             coupon = repository.findByCouponCode(cleanCode);
         }
-
         if (coupon == null) {
             throw new RuntimeException("Coupon Not Found");
         }
-
-        if (Boolean.FALSE.equals(coupon.getActive())) {
+        if (coupon.getActive() != null && !coupon.getActive()) {
             throw new RuntimeException("Coupon Disabled");
         }
 
-        boolean expired = coupon.getExpiryDate() != null && coupon.getExpiryDate().isBefore(LocalDate.now());
-        boolean fullyUsed = coupon.getUsedCount() != null && coupon.getMaxUses() != null && coupon.getUsedCount() >= coupon.getMaxUses();
-
+        boolean expired = coupon.getExpiryDate() != null && coupon.getExpiryDate().isBefore(LocalDate.now().minusDays(1));
+        boolean fullyUsed = coupon.getUsedCount() != null && coupon.getMaxUses() != null && coupon.getMaxUses() > 0 && coupon.getUsedCount() >= coupon.getMaxUses();
         if (expired || fullyUsed) {
-            try {
-                repository.delete(coupon);
-            } catch (Exception e) {}
             throw new RuntimeException(expired ? "Coupon Expired" : "Coupon Usage Limit Reached");
         }
-
         return coupon;
     }
 
@@ -132,36 +122,23 @@ public class CouponService {
         if (couponCode == null || couponCode.trim().isEmpty()) {
             throw new RuntimeException("Coupon Code is required");
         }
-
         String cleanCode = couponCode.trim().toUpperCase();
         Coupon coupon = repository.findByCouponCodeIgnoreCase(cleanCode);
         if (coupon == null) {
             coupon = repository.findByCouponCode(cleanCode);
         }
-
         if (coupon == null) {
             throw new RuntimeException("Coupon Not Found");
         }
-
         int currentUsed = coupon.getUsedCount() != null ? coupon.getUsedCount() : 0;
         coupon.setUsedCount(currentUsed + 1);
-
-        if (coupon.getMaxUses() != null && coupon.getUsedCount() >= coupon.getMaxUses()) {
-            try {
-                repository.delete(coupon);
-            } catch (Exception e) {}
-            return coupon;
-        }
-
         return repository.save(coupon);
     }
 
     @Transactional
     public void deleteCoupon(Long id) {
-        try {
+        if (id != null) {
             repository.deleteById(id);
-        } catch (Exception e) {
-            System.err.println("Failed to delete coupon: " + e.getMessage());
         }
     }
 
@@ -170,12 +147,12 @@ public class CouponService {
     public void autoDeleteInvalidCoupons() {
         try {
             List<Coupon> allCoupons = repository.findAll();
-            LocalDate today = LocalDate.now();
+            LocalDate yesterday = LocalDate.now().minusDays(1);
             List<Coupon> toDelete = new ArrayList<>();
             for (Coupon coupon : allCoupons) {
                 if (coupon == null) continue;
-                boolean expired = coupon.getExpiryDate() != null && coupon.getExpiryDate().isBefore(today);
-                boolean fullyUsed = coupon.getUsedCount() != null && coupon.getMaxUses() != null && coupon.getUsedCount() >= coupon.getMaxUses();
+                boolean expired = coupon.getExpiryDate() != null && coupon.getExpiryDate().isBefore(yesterday);
+                boolean fullyUsed = coupon.getUsedCount() != null && coupon.getMaxUses() != null && coupon.getMaxUses() > 0 && coupon.getUsedCount() >= coupon.getMaxUses();
                 if (expired || fullyUsed) {
                     toDelete.add(coupon);
                 }
