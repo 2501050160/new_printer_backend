@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.saipraveen.login_registration.entity.PrinterConfig;
 import com.saipraveen.login_registration.repository.PrinterConfigRepository;
@@ -14,6 +15,7 @@ public class PrinterConfigService {
     @Autowired
     private PrinterConfigRepository repository;
 
+    @Transactional
     public PrinterConfig savePrinter(PrinterConfig printer) {
         PrinterConfig target = null;
         if (printer.getId() != null) {
@@ -25,34 +27,38 @@ public class PrinterConfigService {
         }
 
         target.setBlockLocation(printer.getBlockLocation());
-        target.setPrinterName(printer.getPrinterName());
-        target.setPrinterIp(printer.getPrinterIp());
+        target.setPrinterName(printer.getPrinterName() != null && !printer.getPrinterName().trim().isEmpty() 
+            ? printer.getPrinterName().trim() 
+            : (printer.getBlockLocation() != null ? printer.getBlockLocation() + " Printer" : "Default Printer"));
+        target.setPrinterIp(printer.getPrinterIp() != null && !printer.getPrinterIp().trim().isEmpty() 
+            ? printer.getPrinterIp().trim() 
+            : "192.168.1.100");
         target.setMaintenance(printer.getMaintenance() != null ? printer.getMaintenance() : false);
         target.setQrScanToPrint(printer.getQrScanToPrint() != null ? printer.getQrScanToPrint() : false);
         target.setOtpEnabled(printer.getOtpEnabled() != null ? printer.getOtpEnabled() : true);
         target.setColourSupported(printer.getColourSupported() != null ? printer.getColourSupported() : false);
         target.setPaused(printer.getPaused() != null ? printer.getPaused() : false);
         target.setBwDisabledForColor(printer.getBwDisabledForColor() != null ? printer.getBwDisabledForColor() : false);
-        if (printer.getPaperCount() != null) {
-            target.setPaperCount(printer.getPaperCount());
-        }
+        target.setPaperCount(printer.getPaperCount() != null ? printer.getPaperCount() : 500);
 
         boolean isActive = printer.getActive() != null ? printer.getActive() : false;
         target.setActive(isActive);
 
+        target = repository.save(target);
+
         // If making this printer active, ensure only 1 active printer for this color type in this block
-        if (isActive && printer.getBlockLocation() != null) {
+        if (isActive && target.getBlockLocation() != null) {
             boolean isColor = target.getColourSupported();
-            List<PrinterConfig> sameTypePrinters = repository.findByBlockLocationAndColourSupported(printer.getBlockLocation(), isColor);
+            List<PrinterConfig> sameTypePrinters = repository.findByBlockLocationAndColourSupported(target.getBlockLocation(), isColor);
             for (PrinterConfig p : sameTypePrinters) {
-                if (target.getId() == null || !p.getId().equals(target.getId())) {
+                if (!p.getId().equals(target.getId())) {
                     p.setActive(false);
                     repository.save(p);
                 }
             }
         }
 
-        return repository.save(target);
+        return target;
     }
 
     public PrinterConfig toggleBwForColor(Long id) {
