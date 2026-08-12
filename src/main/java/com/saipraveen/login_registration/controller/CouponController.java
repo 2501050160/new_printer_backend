@@ -72,6 +72,7 @@ public class CouponController {
             Coupon saved = service.createCoupon(coupon);
             return ResponseEntity.ok(saved);
         } catch (Exception e) {
+            e.printStackTrace();
             System.err.println("Error in createCoupon: " + e.getMessage());
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage() != null ? e.getMessage() : "Failed to create coupon"));
         }
@@ -82,6 +83,7 @@ public class CouponController {
         try {
             return ResponseEntity.ok(service.getAllCoupons());
         } catch (Exception e) {
+            e.printStackTrace();
             System.err.println("Error in getCoupons: " + e.getMessage());
             return ResponseEntity.ok(Collections.emptyList());
         }

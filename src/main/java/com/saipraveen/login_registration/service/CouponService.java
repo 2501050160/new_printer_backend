@@ -82,13 +82,8 @@ public class CouponService {
         return repository.save(coupon);
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public List<Coupon> getAllCoupons() {
-        try {
-            autoDeleteInvalidCoupons();
-        } catch (Exception e) {
-            System.err.println("Warning in autoDeleteInvalidCoupons: " + e.getMessage());
-        }
         return repository.findAll();
     }
 
