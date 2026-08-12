@@ -10,24 +10,16 @@ public class CorsConfig {
 
     @Bean
     public WebMvcConfigurer corsConfigurer() {
-
         return new WebMvcConfigurer() {
-
             @Override
             public void addCorsMappings(CorsRegistry registry) {
-
                 registry.addMapping("/**")
-                        .allowedOrigins(
-                                "http://localhost:5173",
-                                "https://printer-frontend-six.vercel.app",
-                                "https://cloudprint.website",
-                                "https://www.cloudprint.website",
-                                "https://saipraveen.site",
-                                "https://www.saipraveen.site"
-                        )
-                        .allowedMethods("*")
+                        .allowedOriginPatterns("*")
+                        .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD")
                         .allowedHeaders("*")
-                        .allowCredentials(true);
+                        .exposedHeaders("Authorization", "Content-Type", "Access-Control-Allow-Origin")
+                        .allowCredentials(true)
+                        .maxAge(3600);
             }
         };
     }
