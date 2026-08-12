@@ -22,7 +22,5 @@ COPY --from=builder /app/credentials ./credentials
 
 EXPOSE 8080
 
-# Conflict-free low-memory JVM options (Avoids multiple GC collision with JAVA_TOOL_OPTIONS)
-ENV JAVA_OPTS="-Xmx256m -Xms128m -Xss512k -XX:MaxMetaspaceSize=128m -XX:TieredStopAtLevel=1 -XX:CICompilerCount=2 -Djava.security.egd=file:/dev/./urandom"
-
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
+# Clean startup: Unset any conflicting JAVA_TOOL_OPTIONS and pass exact low-memory JVM arguments
+ENTRYPOINT ["sh", "-c", "unset JAVA_TOOL_OPTIONS; exec java -Xmx256m -Xms128m -Xss512k -XX:MaxMetaspaceSize=128m -XX:+UseG1GC -XX:TieredStopAtLevel=1 -XX:CICompilerCount=2 -Djava.security.egd=file:/dev/./urandom -jar app.jar"]
