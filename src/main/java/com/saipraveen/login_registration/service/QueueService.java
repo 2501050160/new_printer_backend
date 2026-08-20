@@ -398,12 +398,20 @@ public class QueueService {
         if (blockLocation == null) {
             return false;
         }
+        try {
+            com.saipraveen.login_registration.entity.PrinterConfig config = printerConfigService.getPrinterByBlock(blockLocation);
+            if (config != null && Boolean.TRUE.equals(config.getActive()) && !Boolean.TRUE.equals(config.getPaused()) && !Boolean.TRUE.equals(config.getMaintenance())) {
+                return true;
+            }
+        } catch (Exception e) {
+            // fallback to recorded heartbeat if config lookup fails
+        }
         String normalized = normalizeBlock(blockLocation);
         LocalDateTime lastHeartbeat = agentHeartbeats.get(normalized);
         if (lastHeartbeat == null) {
             return false;
         }
-        return lastHeartbeat.isAfter(LocalDateTime.now().minusSeconds(15));
+        return lastHeartbeat.isAfter(LocalDateTime.now().minusMinutes(10));
     }
 
     @org.springframework.scheduling.annotation.Scheduled(fixedRate = 30000)

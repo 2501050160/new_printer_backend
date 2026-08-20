@@ -50,12 +50,14 @@ public class SystemStatusController {
         boolean active = false;
         boolean paused = false;
         
+        Integer paperCount = 500;
         try {
             PrinterConfig config = printerService.getPrinterByBlock(blockLocation);
             if (config != null) {
                 active = Boolean.TRUE.equals(config.getActive());
                 paused = Boolean.TRUE.equals(config.getPaused());
                 maintenance = Boolean.TRUE.equals(config.getMaintenance());
+                paperCount = config.getPaperCount() != null ? config.getPaperCount() : 0;
                 
                 if (active && !paused && config.getPrinterName() != null && !config.getPrinterName().trim().isEmpty()) {
                     printerConfigured = true;
@@ -65,12 +67,16 @@ public class SystemStatusController {
             System.err.println("Failed to look up printer config: " + e.getMessage());
         }
 
+        boolean available = dbConnected && active && !paused && !maintenance && printerConfigured;
+
         status.put("databaseConnected", dbConnected);
         status.put("agentOnline", agentOnline);
         status.put("printerConfigured", printerConfigured);
         status.put("maintenance", maintenance);
         status.put("active", active);
         status.put("paused", paused);
+        status.put("paperCount", paperCount);
+        status.put("available", available);
         
         return ResponseEntity.ok(status);
     }
