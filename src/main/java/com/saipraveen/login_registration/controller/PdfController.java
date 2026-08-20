@@ -198,20 +198,27 @@ public ResponseEntity<byte[]> downloadPdf(
 
 @PostMapping("/paymentSuccess")
 public ResponseEntity<?> paymentSuccess(
-
         @RequestParam String orderId,
-
-        @RequestParam String paymentId
-
+        @RequestParam(required = false) String paymentId
 ) {
-
-    return ResponseEntity.ok(
-
-            service.markAsPaid(
-                    orderId,
-                    paymentId
-            )
-    );
+    try {
+        com.saipraveen.login_registration.entity.PdfFile paid = service.markAsPaid(
+                orderId,
+                paymentId != null ? paymentId : "DIRECT_PAY"
+        );
+        java.util.Map<String, Object> resp = new java.util.HashMap<>();
+        resp.put("success", true);
+        resp.put("orderId", paid.getOrderId());
+        resp.put("paymentStatus", paid.getPaymentStatus());
+        resp.put("otpCode", paid.getOtpCode());
+        resp.put("status", paid.getStatus());
+        resp.put("price", paid.getPrice());
+        return ResponseEntity.ok(resp);
+    } catch (Exception e) {
+        System.err.println("Failed to mark order as paid: " + orderId + " error: " + e.getMessage());
+        return ResponseEntity.status(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(java.util.Collections.singletonMap("error", e.getMessage()));
+    }
 }
 
 @PostMapping("/payWithWallet")

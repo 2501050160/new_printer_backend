@@ -776,37 +776,65 @@ public PdfFile markAsPaid(
         String orderId,
         String paymentId
 ) {
+    if (orderId == null || orderId.trim().isEmpty()) {
+        throw new RuntimeException("Order ID cannot be empty");
+    }
 
-    PdfFile pdf =
-            repository.findByOrderId(
-                    orderId
-            );
+    String cleanOrderId = orderId.trim();
+    PdfFile pdf = repository.findByOrderId(cleanOrderId);
 
     if (pdf == null) {
-
-        throw new RuntimeException(
-                "Order Not Found"
-        );
+        // Try finding by ID if cleanOrderId is numeric or formatted
+        try {
+            String digits = cleanOrderId.replaceAll("[^0-9]", "");
+            if (!digits.isEmpty()) {
+                long id = Long.parseLong(digits);
+                pdf = repository.findById(id).orElse(null);
+            }
+        } catch (Exception ignored) {}
     }
 
-    // Check if the order is already marked as paid to prevent duplicate processing
-    if ("PAID".equals(pdf.getPaymentStatus())) {
-        return pdf;
+    if (pdf == null) {
+        throw new RuntimeException("Order Not Found for ID: " + cleanOrderId);
     }
 
-    pdf.setRazorpayPaymentId(
-            paymentId
-    );
+    // Set payment fields immediately
+    pdf.setRazorpayPaymentId(paymentId != null ? paymentId : "PAID");
+    pdf.setPaymentStatus("PAID");
+    if (pdf.getPaidAt() == null) {
+        pdf.setPaidAt(LocalDateTime.now());
+    }
 
-    processReferralRewards(pdf);
+    // Generate random 4-digit OTP if not already present
+    if (pdf.getOtpCode() == null || pdf.getOtpCode().trim().isEmpty()) {
+        int randomOtp = 1000 + new java.util.Random().nextInt(9000);
+        pdf.setOtpCode(String.valueOf(randomOtp));
+    }
 
-    queueService.beginCancelWindow(pdf);
+    try {
+        processReferralRewards(pdf);
+    } catch (Exception e) {
+        System.err.println("Referral rewards error for " + cleanOrderId + ": " + e.getMessage());
+    }
+
+    try {
+        queueService.beginCancelWindow(pdf);
+    } catch (Exception e) {
+        System.err.println("Cancel window initialization error for " + cleanOrderId + ": " + e.getMessage());
+        pdf.setStatus("PENDING_SCAN");
+    }
 
     PdfFile saved = repository.save(pdf);
-    if (sseService != null) {
-        sseService.broadcastOrderEvent(saved.getOrderId(), "PAID");
-        sseService.broadcastQueueEvent("Order paid: " + saved.getOrderId());
+
+    try {
+        if (sseService != null) {
+            sseService.broadcastOrderEvent(saved.getOrderId(), "PAID");
+            sseService.broadcastQueueEvent("Order paid: " + saved.getOrderId());
+        }
+    } catch (Exception e) {
+        System.err.println("SSE broadcast error for " + cleanOrderId + ": " + e.getMessage());
     }
+
     return saved;
 }
 
