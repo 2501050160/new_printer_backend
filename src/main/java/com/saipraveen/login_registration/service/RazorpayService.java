@@ -65,15 +65,26 @@ public class RazorpayService {
                 }
             }
 
-            // Fallback: If no direct match or still on test keys, check if any configured college has live keys in DB
+            // Fallback: If no direct match or if current key is test, search all DB configs for a live key
             if (currentKeyId == null || currentKeyId.startsWith("rzp_test") || currentKeyId.equals(defaultKeyId)) {
                 java.util.List<CollegeConfig> allConfigs = collegeConfigRepository.findAll();
+                // 1. Try to find a live key in DB configs
                 for (CollegeConfig cc : allConfigs) {
-                    if (cc.getRazorpayKeyId() != null && !cc.getRazorpayKeyId().trim().isEmpty()) {
+                    if (cc.getRazorpayKeyId() != null && cc.getRazorpayKeyId().trim().startsWith("rzp_live")) {
                         currentKeyId = cc.getRazorpayKeyId().trim();
                         currentKeySecret = cc.getRazorpayKeySecret() != null ? cc.getRazorpayKeySecret().trim() : "";
-                        logger.info("Fallback: using active database Razorpay credentials from college: {} (key_id: {})", cc.getCollegeName(), currentKeyId);
+                        logger.info("Enforcing DB live credentials from college: {} (key_id: {})", cc.getCollegeName(), currentKeyId);
                         break;
+                    }
+                }
+                // 2. If still not live, use any non-empty key in DB
+                if (currentKeyId.startsWith("rzp_test")) {
+                    for (CollegeConfig cc : allConfigs) {
+                        if (cc.getRazorpayKeyId() != null && !cc.getRazorpayKeyId().trim().isEmpty()) {
+                            currentKeyId = cc.getRazorpayKeyId().trim();
+                            currentKeySecret = cc.getRazorpayKeySecret() != null ? cc.getRazorpayKeySecret().trim() : "";
+                            break;
+                        }
                     }
                 }
             }
