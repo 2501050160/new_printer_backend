@@ -49,10 +49,11 @@ public class RazorpayService {
 
         try {
             PdfFile pdfFile = pdfFileRepository.findByOrderId(appOrderId);
+            String collegeName = null;
             if (pdfFile != null && pdfFile.getBlockLocation() != null) {
                 String loc = pdfFile.getBlockLocation().trim();
                 CampusBlock block = campusBlockRepository.findByNameIgnoreCase(loc);
-                String collegeName = (block != null && block.getCollege() != null && !block.getCollege().trim().isEmpty()) 
+                collegeName = (block != null && block.getCollege() != null && !block.getCollege().trim().isEmpty()) 
                     ? block.getCollege().trim() 
                     : loc;
 
@@ -60,14 +61,27 @@ public class RazorpayService {
                 if (config != null && config.getRazorpayKeyId() != null && !config.getRazorpayKeyId().trim().isEmpty()) {
                     currentKeyId = config.getRazorpayKeyId().trim();
                     currentKeySecret = config.getRazorpayKeySecret() != null ? config.getRazorpayKeySecret().trim() : "";
-                    logger.info("Using custom Razorpay keys for college: {} (key_id: {})", collegeName, currentKeyId);
-                } else {
-                    logger.info("No custom keys for college: {}, using defaultKeyId: {}", collegeName, currentKeyId);
+                    logger.info("Using custom Razorpay keys for matched college: {} (key_id: {})", collegeName, currentKeyId);
+                }
+            }
+
+            // Fallback: If no direct match or still on test keys, check if any configured college has live keys in DB
+            if (currentKeyId == null || currentKeyId.startsWith("rzp_test") || currentKeyId.equals(defaultKeyId)) {
+                java.util.List<CollegeConfig> allConfigs = collegeConfigRepository.findAll();
+                for (CollegeConfig cc : allConfigs) {
+                    if (cc.getRazorpayKeyId() != null && !cc.getRazorpayKeyId().trim().isEmpty()) {
+                        currentKeyId = cc.getRazorpayKeyId().trim();
+                        currentKeySecret = cc.getRazorpayKeySecret() != null ? cc.getRazorpayKeySecret().trim() : "";
+                        logger.info("Fallback: using active database Razorpay credentials from college: {} (key_id: {})", cc.getCollegeName(), currentKeyId);
+                        break;
+                    }
                 }
             }
         } catch (Exception e) {
-            logger.warn("Could not determine dynamic keys for appOrderId: {}, falling back to default keys.", appOrderId);
+            logger.warn("Could not determine dynamic keys for appOrderId: {}, error: {}", appOrderId, e.getMessage());
         }
+
+        logger.info(">> Initializing RazorpayClient with Key ID: {} for appOrderId: {}", currentKeyId, appOrderId);
 
         RazorpayClient client =
                 new RazorpayClient(
