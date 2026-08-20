@@ -89,6 +89,8 @@ public class RazorpayService {
                         System.currentTimeMillis()
         );
 
+        options.put("payment_capture", 1);
+
         JSONObject notes = new JSONObject();
         notes.put("app_order_id", appOrderId);
         options.put("notes", notes);
