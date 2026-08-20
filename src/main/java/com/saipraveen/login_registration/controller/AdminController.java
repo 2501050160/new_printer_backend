@@ -83,8 +83,12 @@ public class AdminController {
     @PostMapping("/users/update-college")
     public ResponseEntity<?> updateUserCollege(
             @org.springframework.web.bind.annotation.RequestParam Long id,
-            @org.springframework.web.bind.annotation.RequestParam String college
+            @org.springframework.web.bind.annotation.RequestParam String college,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String adminUsername
     ) {
+        if (adminUsername != null && !"admin".equalsIgnoreCase(adminUsername.trim())) {
+            return ResponseEntity.badRequest().body("Only the main admin has permission to change user colleges!");
+        }
         return ResponseEntity.ok(userService.updateUserCollegeById(id, college));
     }
 
