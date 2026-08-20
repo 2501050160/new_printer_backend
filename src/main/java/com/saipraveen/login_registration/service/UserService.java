@@ -19,6 +19,26 @@ public class UserService {
     @Autowired
     private VerificationService verificationService;
 
+    @jakarta.annotation.PostConstruct
+    public void initDefaultTesterUser() {
+        try {
+            if (repository.findByEmail("tester@cloudprint.com") == null) {
+                User testUser = new User();
+                testUser.setName("Tester User");
+                testUser.setEmail("tester@cloudprint.com");
+                testUser.setPassword("tester123");
+                testUser.setWalletBalance(100.0);
+                testUser.setEmailVerified(true);
+                testUser.setBlocked(false);
+                testUser.setReferralCode("TEST88");
+                repository.save(testUser);
+                System.out.println("✅ Default tester user initialized (tester@cloudprint.com / tester123)");
+            }
+        } catch (Exception e) {
+            System.err.println("Warning: Default tester user init deferred: " + e.getMessage());
+        }
+    }
+
     public User registerUser(User user) {
         if (repository.findByEmail(user.getEmail()) != null) {
             throw new RuntimeException("Username is already registered.");
