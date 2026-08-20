@@ -75,7 +75,7 @@ public class RazorpayService {
 
         options.put(
                 "amount",
-                amount * 100
+                Math.round(amount * 100)
         );
 
         options.put(
@@ -104,6 +104,7 @@ public class RazorpayService {
             ObjectMapper mapper = new ObjectMapper();
             @SuppressWarnings("unchecked")
             Map<String, Object> orderMap = mapper.readValue(order.toString(), Map.class);
+            orderMap.put("key_id", currentKeyId);
             
             logger.info("Order ID: {} | Amount: {} | Status: {}", 
                 orderMap.get("id"), 
