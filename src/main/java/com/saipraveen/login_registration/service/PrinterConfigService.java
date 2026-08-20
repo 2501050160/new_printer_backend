@@ -182,6 +182,12 @@ public class PrinterConfigService {
             return new AvailabilityResult(false, "The printer at '" + block + "' is currently offline or inactive. Please select another block.");
         }
 
+        boolean hasAssignedPrinter = activePrinters.stream()
+                .anyMatch(p -> p.getPrinterName() != null && !p.getPrinterName().trim().isEmpty());
+        if (!hasAssignedPrinter) {
+            return new AvailabilityResult(false, "No active printer hardware is assigned to kiosk block '" + block + "'. Please select another block.");
+        }
+
         boolean allMaintenanceOrPaused = activePrinters.stream()
                 .allMatch(p -> Boolean.TRUE.equals(p.getMaintenance()) || Boolean.TRUE.equals(p.getPaused()));
         if (allMaintenanceOrPaused) {
