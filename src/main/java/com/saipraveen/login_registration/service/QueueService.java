@@ -312,26 +312,18 @@ public class QueueService {
         if (pdf.getScheduledTime() != null) {
             pdf.setStatus("SCHEDULED");
         } else {
-            boolean cancelWindowEnabled = systemSettingService.getSettingBool("cancel_window_enabled", true);
-            if (cancelWindowEnabled) {
-                pdf.setCancelWindowEndsAt(
-                        now.plusSeconds(cancelWindowSeconds)
-                );
-                pdf.setStatus("CANCEL_WINDOW");
+            pdf.setCancelWindowEndsAt(now);
+            com.saipraveen.login_registration.entity.PrinterConfig config = null;
+            try {
+                config = printerConfigService.getPrinterByBlock(pdf.getBlockLocation());
+            } catch (Exception e) {
+                System.err.println("Failed to fetch printer config: " + e.getMessage());
+            }
+            if (config != null && Boolean.FALSE.equals(config.getOtpEnabled())) {
+                pdf.setStatus("QUEUE");
+                pdf.setQueuedAt(now);
             } else {
-                pdf.setCancelWindowEndsAt(now);
-                com.saipraveen.login_registration.entity.PrinterConfig config = null;
-                try {
-                    config = printerConfigService.getPrinterByBlock(pdf.getBlockLocation());
-                } catch (Exception e) {
-                    System.err.println("Failed to fetch printer config: " + e.getMessage());
-                }
-                if (config != null && Boolean.FALSE.equals(config.getOtpEnabled())) {
-                    pdf.setStatus("QUEUE");
-                    pdf.setQueuedAt(now);
-                } else {
-                    pdf.setStatus("PENDING_SCAN");
-                }
+                pdf.setStatus("PENDING_SCAN");
             }
         }
 
