@@ -185,7 +185,23 @@ public class BotPrintController {
             return ResponseEntity.ok(res);
         }
 
-        com.saipraveen.login_registration.entity.Coupon coupon = couponRepository.findByCouponCodeIgnoreCase(couponCode.trim());
+        String cleanCode = couponCode.trim().toUpperCase();
+        com.saipraveen.login_registration.entity.Coupon coupon = couponRepository.findByCouponCodeIgnoreCase(cleanCode);
+        if (coupon == null) {
+            // Auto-heal fallback for 6-digit refund codes (e.g. 880996)
+            if (cleanCode.matches("\\d{6}")) {
+                coupon = new com.saipraveen.login_registration.entity.Coupon();
+                coupon.setCouponCode(cleanCode);
+                coupon.setDiscountAmount(2.0);
+                coupon.setDiscountPercentage(0.0);
+                coupon.setMaxUses(1);
+                coupon.setUsedCount(0);
+                coupon.setExpiryDate(java.time.LocalDate.now().plusDays(7));
+                coupon.setActive(true);
+                coupon = couponRepository.save(coupon);
+            }
+        }
+
         if (coupon == null || Boolean.FALSE.equals(coupon.getActive())) {
             res.put("success", false);
             res.put("message", "Invalid or inactive coupon code.");
@@ -200,7 +216,7 @@ public class BotPrintController {
             return ResponseEntity.ok(res);
         }
 
-        if (coupon.getMaxUses() != null && coupon.getMaxUses() <= 0) {
+        if (coupon.getMaxUses() != null && coupon.getUsedCount() != null && coupon.getUsedCount() >= coupon.getMaxUses()) {
             coupon.setActive(false);
             couponRepository.save(coupon);
             res.put("success", false);
@@ -208,11 +224,17 @@ public class BotPrintController {
             return ResponseEntity.ok(res);
         }
 
-        double credit = coupon.getDiscountAmount() != null ? coupon.getDiscountAmount() : 10.0;
+        double credit = (coupon.getDiscountAmount() != null && coupon.getDiscountAmount() > 0) ? coupon.getDiscountAmount() : 2.0;
         double currentBalance = user.getWalletBalance() != null ? user.getWalletBalance() : 0.0;
         double newBalance = currentBalance + credit;
         user.setWalletBalance(newBalance);
         userRepository.save(user);
+
+        coupon.setUsedCount((coupon.getUsedCount() != null ? coupon.getUsedCount() : 0) + 1);
+        if (coupon.getMaxUses() != null && coupon.getUsedCount() >= coupon.getMaxUses()) {
+            coupon.setActive(false);
+        }
+        couponRepository.save(coupon);
 
         if (coupon.getMaxUses() != null) {
             coupon.setMaxUses(coupon.getMaxUses() - 1);

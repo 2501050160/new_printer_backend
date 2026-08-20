@@ -78,6 +78,30 @@ public class CouponController {
         }
     }
 
+    @PostMapping("/refund")
+    public ResponseEntity<?> createRefundCoupon(
+            @RequestParam(required = false) Double amount,
+            @RequestParam(required = false) String code
+    ) {
+        try {
+            Coupon coupon = new Coupon();
+            String couponCode = (code != null && !code.trim().isEmpty()) 
+                ? code.trim().toUpperCase() 
+                : String.valueOf(100000 + new java.util.Random().nextInt(900000));
+            coupon.setCouponCode(couponCode);
+            coupon.setDiscountAmount(amount != null && amount > 0 ? amount : 2.0);
+            coupon.setDiscountPercentage(0.0);
+            coupon.setExpiryDate(LocalDate.now().plusDays(7));
+            coupon.setMaxUses(1);
+            coupon.setUsedCount(0);
+            coupon.setActive(true);
+            Coupon saved = service.createCoupon(coupon);
+            return ResponseEntity.ok(saved);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
     @GetMapping("/all")
     public ResponseEntity<?> getCoupons() {
         try {
