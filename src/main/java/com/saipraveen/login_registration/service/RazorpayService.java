@@ -49,15 +49,20 @@ public class RazorpayService {
 
         try {
             PdfFile pdfFile = pdfFileRepository.findByOrderId(appOrderId);
-            if (pdfFile != null) {
-                CampusBlock block = campusBlockRepository.findByName(pdfFile.getBlockLocation());
-                if (block != null && block.getCollege() != null) {
-                    CollegeConfig config = collegeConfigRepository.findByCollegeName(block.getCollege());
-                    if (config != null) {
-                        currentKeyId = config.getRazorpayKeyId();
-                        currentKeySecret = config.getRazorpayKeySecret();
-                        logger.info("Using custom Razorpay keys for college: {}", block.getCollege());
-                    }
+            if (pdfFile != null && pdfFile.getBlockLocation() != null) {
+                String loc = pdfFile.getBlockLocation().trim();
+                CampusBlock block = campusBlockRepository.findByNameIgnoreCase(loc);
+                String collegeName = (block != null && block.getCollege() != null && !block.getCollege().trim().isEmpty()) 
+                    ? block.getCollege().trim() 
+                    : loc;
+
+                CollegeConfig config = collegeConfigRepository.findByCollegeNameIgnoreCase(collegeName);
+                if (config != null && config.getRazorpayKeyId() != null && !config.getRazorpayKeyId().trim().isEmpty()) {
+                    currentKeyId = config.getRazorpayKeyId().trim();
+                    currentKeySecret = config.getRazorpayKeySecret() != null ? config.getRazorpayKeySecret().trim() : "";
+                    logger.info("Using custom Razorpay keys for college: {} (key_id: {})", collegeName, currentKeyId);
+                } else {
+                    logger.info("No custom keys for college: {}, using defaultKeyId: {}", collegeName, currentKeyId);
                 }
             }
         } catch (Exception e) {
