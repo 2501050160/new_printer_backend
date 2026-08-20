@@ -80,6 +80,14 @@ public class AdminController {
         return ResponseEntity.ok("User deleted");
     }
 
+    @PostMapping("/users/update-college")
+    public ResponseEntity<?> updateUserCollege(
+            @org.springframework.web.bind.annotation.RequestParam Long id,
+            @org.springframework.web.bind.annotation.RequestParam String college
+    ) {
+        return ResponseEntity.ok(userService.updateUserCollegeById(id, college));
+    }
+
     @PostMapping("/reset-stats")
     public ResponseEntity<?> resetStats(
             @org.springframework.web.bind.annotation.RequestParam String adminUsername,

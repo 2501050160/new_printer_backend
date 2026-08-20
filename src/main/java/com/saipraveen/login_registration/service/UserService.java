@@ -260,4 +260,14 @@ public class UserService {
         }
         repository.save(user);
     }
+
+    @Transactional
+    public User updateUserCollegeById(Long id, String college) {
+        User user = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        if (college != null && !college.trim().isEmpty()) {
+            user.setCollege(college.trim().toUpperCase());
+        }
+        return repository.save(user);
+    }
 }
