@@ -11,7 +11,7 @@ import com.saipraveen.login_registration.repository.CollegeConfigRepository;
 
 @RestController
 @RequestMapping("/api/college-config")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(originPatterns = "*")
 public class CollegeConfigController {
 
     @Autowired
