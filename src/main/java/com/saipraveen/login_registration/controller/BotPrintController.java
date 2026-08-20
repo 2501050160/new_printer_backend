@@ -28,6 +28,9 @@ public class BotPrintController {
     private PdfFileService pdfFileService;
 
     @Autowired
+    private com.saipraveen.login_registration.repository.PdfFileRepository pdfFileRepository;
+
+    @Autowired
     private com.saipraveen.login_registration.service.PrinterConfigService printerConfigService;
 
     @Autowired
@@ -192,7 +195,21 @@ public class BotPrintController {
             if (cleanCode.matches("\\d{6}")) {
                 coupon = new com.saipraveen.login_registration.entity.Coupon();
                 coupon.setCouponCode(cleanCode);
-                coupon.setDiscountAmount(2.0);
+                double detectedAmount = 2.0;
+                try {
+                    java.util.List<com.saipraveen.login_registration.entity.PdfFile> recentOrders = pdfFileRepository.findByUserId(user.getId());
+                    if (recentOrders != null && !recentOrders.isEmpty()) {
+                        for (com.saipraveen.login_registration.entity.PdfFile p : recentOrders) {
+                            if ("CANCELLED".equalsIgnoreCase(p.getStatus()) || "EXPIRED".equalsIgnoreCase(p.getStatus()) || "PAID".equalsIgnoreCase(p.getPaymentStatus())) {
+                                if (p.getPrice() != null && p.getPrice() > 0) {
+                                    detectedAmount = p.getPrice();
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                } catch (Exception ignored) {}
+                coupon.setDiscountAmount(detectedAmount);
                 coupon.setDiscountPercentage(0.0);
                 coupon.setMaxUses(1);
                 coupon.setUsedCount(0);
