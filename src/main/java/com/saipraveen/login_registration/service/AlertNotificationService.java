@@ -51,7 +51,8 @@ public class AlertNotificationService {
             String printerName,
             String issueType,
             String details,
-            String orderId
+            String orderId,
+            String testerPhone
     ) {
         String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
         String location = (blockLocation != null && !blockLocation.trim().isEmpty()) ? blockLocation : "Main Campus Kiosk";
@@ -64,6 +65,9 @@ public class AlertNotificationService {
         System.out.println("📍 Location: " + location + " | Printer: " + printer);
         System.out.println("📝 Details: " + desc);
         System.out.println("📱 Admin Phone: " + ADMIN_PHONE + " | Agent Phone: " + AGENT_PHONE);
+        if (testerPhone != null && !testerPhone.trim().isEmpty()) {
+            System.out.println("📱 Tester Phone (SMS/WhatsApp): " + testerPhone);
+        }
         System.out.println("📧 Admin Email: " + ADMIN_EMAIL);
         System.out.println("==========================================================");
 
@@ -71,7 +75,7 @@ public class AlertNotificationService {
         sendEmailAlert(location, printer, type, desc, orderId, timestamp);
 
         // 2. Send WhatsApp Notification
-        sendWhatsAppAlert(location, printer, type, desc, orderId, timestamp);
+        sendWhatsAppAlert(location, printer, type, desc, orderId, timestamp, testerPhone);
 
         // 3. Auto-Protect Kiosk: If Out of Paper or Jammed, set Maintenance flag
         try {
@@ -176,7 +180,7 @@ public class AlertNotificationService {
         }
     }
 
-    private void sendWhatsAppAlert(String location, String printer, String type, String desc, String orderId, String timestamp) {
+    private void sendWhatsAppAlert(String location, String printer, String type, String desc, String orderId, String timestamp, String testerPhone) {
         String waMessage = String.format(
                 "🚨 *CLOUD PRINT HARDWARE ALERT*\n" +
                 "━━━━━━━━━━━━━━━━━━━━━━\n" +
@@ -187,10 +191,8 @@ public class AlertNotificationService {
                 "🆔 *Order ID*: %s\n" +
                 "⏱️ *Time*: %s\n" +
                 "━━━━━━━━━━━━━━━━━━━━━━\n" +
-                "📞 *Admin*: +91 %s\n" +
-                "📞 *Print Agent*: +91 %s\n" +
                 "Action required: Check kiosk machine immediately.",
-                location, printer, type, desc, (orderId != null ? orderId : "None"), timestamp, ADMIN_PHONE, AGENT_PHONE
+                location, printer, type, desc, (orderId != null ? orderId : "None"), timestamp
         );
 
         // Dispatches to both Admin (9494189664) and Print Agent (8688500278)
@@ -198,5 +200,10 @@ public class AlertNotificationService {
         System.out.println(waMessage);
         System.out.println("📱 Dispatched WhatsApp Alert to Print Agent (+91 " + AGENT_PHONE + "):");
         System.out.println(waMessage);
+
+        if (testerPhone != null && !testerPhone.trim().isEmpty()) {
+            System.out.println("📱 Dispatched Test SMS / WhatsApp Notification to Tester (+91 " + testerPhone.trim() + "):");
+            System.out.println(waMessage);
+        }
     }
 }

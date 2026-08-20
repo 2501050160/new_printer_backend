@@ -104,9 +104,9 @@ public ResponseEntity<?> savePrinter(
     ) {
         service.updatePaperCount(blockLocation, paperCount);
         if (paperCount != null && paperCount <= 0) {
-            alertService.triggerPrinterAlert(blockLocation, null, "OUT_OF_PAPER", "Paper tray is empty (0 sheets remaining).", null);
+            alertService.triggerPrinterAlert(blockLocation, null, "OUT_OF_PAPER", "Paper tray is empty (0 sheets remaining).", null, null);
         } else if (paperCount != null && paperCount <= 15) {
-            alertService.triggerPrinterAlert(blockLocation, null, "LOW_PAPER", "Paper count is critically low (" + paperCount + " sheets remaining).", null);
+            alertService.triggerPrinterAlert(blockLocation, null, "LOW_PAPER", "Paper count is critically low (" + paperCount + " sheets remaining).", null, null);
         }
         return ResponseEntity.ok("Paper count updated successfully");
     }
@@ -120,9 +120,10 @@ public ResponseEntity<?> savePrinter(
         String issueType = payload.get("issueType");
         String details = payload.get("details");
         String orderId = payload.get("orderId");
+        String testerPhone = payload.get("testerPhone");
 
         return ResponseEntity.ok(
-                alertService.triggerPrinterAlert(blockLocation, printerName, issueType, details, orderId)
+                alertService.triggerPrinterAlert(blockLocation, printerName, issueType, details, orderId, testerPhone)
         );
     }
 
