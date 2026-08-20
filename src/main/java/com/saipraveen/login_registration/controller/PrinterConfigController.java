@@ -94,13 +94,36 @@ public ResponseEntity<?> savePrinter(
         return ResponseEntity.ok(printer.getPaperCount() != null ? printer.getPaperCount() : 0);
     }
 
+    @Autowired
+    private com.saipraveen.login_registration.service.AlertNotificationService alertService;
+
     @PostMapping("/updatePaper")
     public ResponseEntity<?> updatePaperCount(
             @RequestParam String blockLocation,
             @RequestParam Integer paperCount
     ) {
         service.updatePaperCount(blockLocation, paperCount);
+        if (paperCount != null && paperCount <= 0) {
+            alertService.triggerPrinterAlert(blockLocation, null, "OUT_OF_PAPER", "Paper tray is empty (0 sheets remaining).", null);
+        } else if (paperCount != null && paperCount <= 15) {
+            alertService.triggerPrinterAlert(blockLocation, null, "LOW_PAPER", "Paper count is critically low (" + paperCount + " sheets remaining).", null);
+        }
         return ResponseEntity.ok("Paper count updated successfully");
+    }
+
+    @PostMapping("/report-issue")
+    public ResponseEntity<?> reportIssue(
+            @RequestBody java.util.Map<String, String> payload
+    ) {
+        String blockLocation = payload.get("blockLocation");
+        String printerName = payload.get("printerName");
+        String issueType = payload.get("issueType");
+        String details = payload.get("details");
+        String orderId = payload.get("orderId");
+
+        return ResponseEntity.ok(
+                alertService.triggerPrinterAlert(blockLocation, printerName, issueType, details, orderId)
+        );
     }
 
     @GetMapping("/availability")
