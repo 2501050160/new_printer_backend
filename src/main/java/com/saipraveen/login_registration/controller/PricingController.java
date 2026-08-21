@@ -19,12 +19,27 @@ public class PricingController {
     @Autowired
     private PricingService service;
 
+    @Autowired
+    private com.saipraveen.login_registration.repository.CampusBlockRepository campusBlockRepository;
+
     @GetMapping("/all")
     public ResponseEntity<?> getPrices(@RequestParam(required = false) String blockLocation) {
         if (blockLocation != null && !blockLocation.trim().isEmpty()) {
             return ResponseEntity.ok(service.getPricesByBlock(blockLocation));
         }
         return ResponseEntity.ok(service.getPrices());
+    }
+
+    @GetMapping("/by-college")
+    public ResponseEntity<?> getPricesByCollege(@RequestParam(defaultValue = "KLU") String college) {
+        java.util.List<com.saipraveen.login_registration.entity.CampusBlock> blks = campusBlockRepository.findByCollege(college);
+        java.util.List<com.saipraveen.login_registration.entity.Pricing> result = new java.util.ArrayList<>();
+        if (blks != null) {
+            for (com.saipraveen.login_registration.entity.CampusBlock b : blks) {
+                result.addAll(service.getPricesByBlock(b.getName()));
+            }
+        }
+        return ResponseEntity.ok(result);
     }
 
     @PostMapping("/update")
