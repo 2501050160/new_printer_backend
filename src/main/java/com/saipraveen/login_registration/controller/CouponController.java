@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.saipraveen.login_registration.entity.Coupon;
-import com.saipraveen.login_registration.service.CouponService;
+import com.saipraveen.login_registration.repository.CouponRepository;
 
 @RestController
 @RequestMapping("/api/coupon")
@@ -27,7 +27,7 @@ import com.saipraveen.login_registration.service.CouponService;
 public class CouponController {
 
     @Autowired
-    private CouponService service;
+    private CouponRepository repository;
 
     @ExceptionHandler(Throwable.class)
     public ResponseEntity<?> handleException(Throwable t) {
@@ -97,11 +97,31 @@ public class CouponController {
                     coupon.setExpiryDate(LocalDate.now().plusDays(30).toString());
                 }
             }
-            Coupon saved = service.createCoupon(coupon);
+
+            if (coupon.getCouponCode() == null || coupon.getCouponCode().trim().isEmpty()) {
+                coupon.setCouponCode("PRINT" + (1000 + new java.util.Random().nextInt(9000)));
+            }
+
+            List<Coupon> existingList = repository.findByCouponCodeIgnoreCase(coupon.getCouponCode());
+            if (existingList != null && !existingList.isEmpty()) {
+                Coupon existing = existingList.get(0);
+                if (coupon.getDiscountPercentage() != null) existing.setDiscountPercentage(coupon.getDiscountPercentage());
+                if (coupon.getDiscountAmount() != null) existing.setDiscountAmount(coupon.getDiscountAmount());
+                if (coupon.getMinOrderAmount() != null) existing.setMinOrderAmount(coupon.getMinOrderAmount());
+                if (coupon.getExpiryDate() != null) existing.setExpiryDate(coupon.getExpiryDate());
+                if (coupon.getMaxUses() != null) existing.setMaxUses(coupon.getMaxUses());
+                existing.setActive(coupon.getActive() != null ? coupon.getActive() : true);
+                Coupon saved = repository.save(existing);
+                return ResponseEntity.ok(mapCoupon(saved));
+            }
+
+            if (coupon.getUsedCount() == null) coupon.setUsedCount(0);
+            if (coupon.getActive() == null) coupon.setActive(true);
+
+            Coupon saved = repository.save(coupon);
             return ResponseEntity.ok(mapCoupon(saved));
         } catch (Throwable e) {
             e.printStackTrace();
-            System.err.println("Error in createCoupon: " + e.getMessage());
             return ResponseEntity.status(500).body(Map.of("error", e.getMessage() != null ? e.getMessage() : e.toString(), "class", e.getClass().getName()));
         }
     }
@@ -123,7 +143,7 @@ public class CouponController {
             coupon.setMaxUses(1);
             coupon.setUsedCount(0);
             coupon.setActive(true);
-            Coupon saved = service.createCoupon(coupon);
+            Coupon saved = repository.save(coupon);
             return ResponseEntity.ok(mapCoupon(saved));
         } catch (Throwable e) {
             return ResponseEntity.status(500).body(Map.of("error", e.getMessage() != null ? e.getMessage() : e.toString()));
@@ -133,7 +153,7 @@ public class CouponController {
     @GetMapping("/all")
     public ResponseEntity<?> getCoupons() {
         try {
-            List<Coupon> raw = service.getAllCoupons();
+            List<Coupon> raw = repository.findAll();
             List<Map<String, Object>> result = new ArrayList<>();
             if (raw != null) {
                 for (Coupon c : raw) {
@@ -143,7 +163,6 @@ public class CouponController {
             return ResponseEntity.ok(result);
         } catch (Throwable e) {
             e.printStackTrace();
-            System.err.println("Error in getCoupons: " + e.getMessage());
             return ResponseEntity.ok(Collections.emptyList());
         }
     }
@@ -151,8 +170,14 @@ public class CouponController {
     @GetMapping("/validate")
     public ResponseEntity<?> validateCoupon(@RequestParam String couponCode) {
         try {
-            Coupon c = service.validateCoupon(couponCode);
-            return ResponseEntity.ok(mapCoupon(c));
+            if (couponCode == null || couponCode.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Coupon code required"));
+            }
+            List<Coupon> list = repository.findByCouponCodeIgnoreCase(couponCode.trim());
+            if (list == null || list.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Coupon Not Found"));
+            }
+            return ResponseEntity.ok(mapCoupon(list.get(0)));
         } catch (Throwable e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage() != null ? e.getMessage() : "Invalid coupon"));
         }
@@ -161,8 +186,20 @@ public class CouponController {
     @PostMapping("/use")
     public ResponseEntity<?> useCoupon(@RequestParam String couponCode) {
         try {
-            Coupon c = service.useCoupon(couponCode);
-            return ResponseEntity.ok(mapCoupon(c));
+            if (couponCode == null || couponCode.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Coupon code required"));
+            }
+            List<Coupon> list = repository.findByCouponCodeIgnoreCase(couponCode.trim());
+            if (list == null || list.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Coupon Not Found"));
+            }
+            Coupon c = list.get(0);
+            c.setUsedCount((c.getUsedCount() != null ? c.getUsedCount() : 0) + 1);
+            if (c.getMaxUses() != null && c.getUsedCount() >= c.getMaxUses()) {
+                c.setActive(false);
+            }
+            Coupon saved = repository.save(c);
+            return ResponseEntity.ok(mapCoupon(saved));
         } catch (Throwable e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage() != null ? e.getMessage() : "Failed to use coupon"));
         }
@@ -171,7 +208,9 @@ public class CouponController {
     @PostMapping("/delete")
     public ResponseEntity<?> deleteCoupon(@RequestParam Long id) {
         try {
-            service.deleteCoupon(id);
+            if (id != null) {
+                repository.deleteById(id);
+            }
             return ResponseEntity.ok(Map.of("message", "Coupon Deleted"));
         } catch (Throwable e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage() != null ? e.getMessage() : "Failed to delete coupon"));
