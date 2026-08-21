@@ -71,6 +71,7 @@ private String printType;
     private String googleDriveFileId;
     private String googleDriveWebViewLink;
     private LocalDateTime fileExpiryTime;
+    private String orderChannel = "WEB";
 
     @Column(columnDefinition = "bytea")
     @com.fasterxml.jackson.annotation.JsonIgnore
@@ -353,5 +354,13 @@ public void setTotalPages(Integer totalPages) {
 
     public void setFileExpiryTime(LocalDateTime fileExpiryTime) {
         this.fileExpiryTime = fileExpiryTime;
+    }
+
+    public String getOrderChannel() {
+        return orderChannel;
+    }
+
+    public void setOrderChannel(String orderChannel) {
+        this.orderChannel = orderChannel;
     }
 }

@@ -96,6 +96,8 @@ public class BotPrintController {
 
             // Save PDF to DB linked to the unique WhatsApp User ID
             PdfFile pdf = pdfFileService.savePdf(file, user.getId(), fullNameWithPhone, blockLocation);
+            pdf.setOrderChannel("WHATSAPP");
+            pdf = pdfFileRepository.save(pdf);
 
             // Update order details to generate real Order ID
             PdfFile updated = pdfFileService.updateOrder(
@@ -107,6 +109,8 @@ public class BotPrintController {
                     "1-up",
                     doubleSided != null ? doubleSided : false
             );
+            updated.setOrderChannel("WHATSAPP");
+            updated = pdfFileRepository.save(updated);
 
             // Calculate details from updated PDF
             int pages = updated.getTotalPages() != null ? updated.getTotalPages() : 1;

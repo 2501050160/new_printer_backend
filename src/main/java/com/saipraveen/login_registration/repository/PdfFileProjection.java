@@ -32,4 +32,5 @@ public interface PdfFileProjection {
     String getGoogleDriveFileId();
     String getGoogleDriveWebViewLink();
     LocalDateTime getFileExpiryTime();
+    String getOrderChannel();
 }
