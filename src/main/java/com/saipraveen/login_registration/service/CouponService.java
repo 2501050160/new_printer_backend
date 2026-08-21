@@ -18,6 +18,15 @@ public class CouponService {
     @Autowired
     private CouponRepository repository;
 
+    private Coupon findFirstCoupon(String code) {
+        if (code == null) return null;
+        List<Coupon> list = repository.findByCouponCodeIgnoreCase(code.trim());
+        if (list != null && !list.isEmpty()) return list.get(0);
+        list = repository.findByCouponCode(code.trim());
+        if (list != null && !list.isEmpty()) return list.get(0);
+        return null;
+    }
+
     @Transactional
     public Coupon createCoupon(Coupon coupon) {
         if (coupon == null) {
@@ -30,10 +39,7 @@ public class CouponService {
             coupon.setCouponCode(coupon.getCouponCode().trim().toUpperCase());
         }
 
-        Coupon existing = repository.findByCouponCodeIgnoreCase(coupon.getCouponCode());
-        if (existing == null) {
-            existing = repository.findByCouponCode(coupon.getCouponCode());
-        }
+        Coupon existing = findFirstCoupon(coupon.getCouponCode());
 
         if (existing != null && (coupon.getId() == null || !existing.getId().equals(coupon.getId()))) {
             if (coupon.getDiscountPercentage() != null) {
@@ -96,10 +102,7 @@ public class CouponService {
             throw new RuntimeException("Coupon Code is required");
         }
         String cleanCode = couponCode.trim().toUpperCase();
-        Coupon coupon = repository.findByCouponCodeIgnoreCase(cleanCode);
-        if (coupon == null) {
-            coupon = repository.findByCouponCode(cleanCode);
-        }
+        Coupon coupon = findFirstCoupon(cleanCode);
         if (coupon == null) {
             // Auto-heal fallback for 6-digit refund codes (e.g. 880996)
             if (cleanCode.matches("\\d{6}")) {
@@ -107,6 +110,7 @@ public class CouponService {
                 coupon.setCouponCode(cleanCode);
                 coupon.setDiscountAmount(2.0);
                 coupon.setDiscountPercentage(0.0);
+                coupon.setMinOrderAmount(0.0);
                 coupon.setMaxUses(1);
                 coupon.setUsedCount(0);
                 coupon.setExpiryDate(LocalDate.now().plusDays(7));
@@ -134,16 +138,14 @@ public class CouponService {
             throw new RuntimeException("Coupon Code is required");
         }
         String cleanCode = couponCode.trim().toUpperCase();
-        Coupon coupon = repository.findByCouponCodeIgnoreCase(cleanCode);
-        if (coupon == null) {
-            coupon = repository.findByCouponCode(cleanCode);
-        }
+        Coupon coupon = findFirstCoupon(cleanCode);
         if (coupon == null) {
             if (cleanCode.matches("\\d{6}")) {
                 coupon = new Coupon();
                 coupon.setCouponCode(cleanCode);
                 coupon.setDiscountAmount(2.0);
                 coupon.setDiscountPercentage(0.0);
+                coupon.setMinOrderAmount(0.0);
                 coupon.setMaxUses(1);
                 coupon.setUsedCount(0);
                 coupon.setExpiryDate(LocalDate.now().plusDays(7));

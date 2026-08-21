@@ -7,11 +7,11 @@ import com.saipraveen.login_registration.entity.Coupon;
 public interface CouponRepository
         extends JpaRepository<Coupon, Long> {
 
-    Coupon findByCouponCode(
+    java.util.List<Coupon> findByCouponCode(
             String couponCode
     );
 
-    Coupon findByCouponCodeIgnoreCase(
+    java.util.List<Coupon> findByCouponCodeIgnoreCase(
             String couponCode
     );
 }

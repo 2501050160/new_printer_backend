@@ -232,7 +232,8 @@ public class BotPrintController {
         }
 
         String cleanCode = couponCode.trim().toUpperCase();
-        com.saipraveen.login_registration.entity.Coupon coupon = couponRepository.findByCouponCodeIgnoreCase(cleanCode);
+        java.util.List<com.saipraveen.login_registration.entity.Coupon> coupons = couponRepository.findByCouponCodeIgnoreCase(cleanCode);
+        com.saipraveen.login_registration.entity.Coupon coupon = (coupons != null && !coupons.isEmpty()) ? coupons.get(0) : null;
         if (coupon == null) {
             // Auto-heal fallback for 6-digit refund codes (e.g. 880996)
             if (cleanCode.matches("\\d{6}")) {
