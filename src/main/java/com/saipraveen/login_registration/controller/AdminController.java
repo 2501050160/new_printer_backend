@@ -289,7 +289,8 @@ public class AdminController {
     @org.springframework.web.bind.annotation.GetMapping("/settings/thesis")
     public ResponseEntity<?> getCollegeThesisSettings(@org.springframework.web.bind.annotation.RequestParam(defaultValue = "KLU") String college) {
         java.util.Map<String, Object> settings = new java.util.HashMap<>();
-        settings.put("thesisDiscountPages", systemSettingService.getSettingDouble("thesis_discount_pages_" + college, systemSettingService.getSettingDouble("thesis_discount_pages", 50.0)));
+        settings.put("thesisEnabled", systemSettingService.getSettingBool("thesis_enabled_" + college, systemSettingService.getSettingBool("thesis_enabled", true)));
+        settings.put("thesisDiscountPages", systemSettingService.getSettingDouble("thesis_discount_pages_" + college, systemSettingService.getSettingDouble("thesis_discount_pages", 500.0)));
         settings.put("thesisDiscountPercent", systemSettingService.getSettingDouble("thesis_discount_percent_" + college, systemSettingService.getSettingDouble("thesis_discount_percent", 15.0)));
         return ResponseEntity.ok(settings);
     }
@@ -298,6 +299,10 @@ public class AdminController {
     public ResponseEntity<?> updateCollegeThesisSettings(
             @org.springframework.web.bind.annotation.RequestParam(defaultValue = "KLU") String college,
             @RequestBody java.util.Map<String, Object> request) {
+        if (request.containsKey("thesisEnabled")) {
+            systemSettingService.setSetting("thesis_enabled_" + college, String.valueOf(request.get("thesisEnabled")));
+            systemSettingService.setSetting("thesis_enabled", String.valueOf(request.get("thesisEnabled")));
+        }
         if (request.containsKey("thesisDiscountPages")) {
             systemSettingService.setSetting("thesis_discount_pages_" + college, String.valueOf(request.get("thesisDiscountPages")));
             systemSettingService.setSetting("thesis_discount_pages", String.valueOf(request.get("thesisDiscountPages")));
