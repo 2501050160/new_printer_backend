@@ -22,6 +22,8 @@ public class Coupon {
 
     private Double discountAmount;
 
+    private Double minOrderAmount;
+
     private LocalDate expiryDate;
 
     private Integer maxUses;
@@ -60,6 +62,14 @@ public class Coupon {
 
     public void setDiscountAmount(Double discountAmount) {
         this.discountAmount = discountAmount;
+    }
+
+    public Double getMinOrderAmount() {
+        return minOrderAmount;
+    }
+
+    public void setMinOrderAmount(Double minOrderAmount) {
+        this.minOrderAmount = minOrderAmount;
     }
 
     public LocalDate getExpiryDate() {

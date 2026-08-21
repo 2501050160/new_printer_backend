@@ -48,6 +48,11 @@ public class CouponController {
                         coupon.setDiscountAmount(Double.parseDouble(body.get("discountAmount").toString()));
                     } catch (Exception ignored) {}
                 }
+                if (body.get("minOrderAmount") != null) {
+                    try {
+                        coupon.setMinOrderAmount(Double.parseDouble(body.get("minOrderAmount").toString()));
+                    } catch (Exception ignored) {}
+                }
                 if (body.get("maxUses") != null) {
                     try {
                         coupon.setMaxUses(Integer.parseInt(body.get("maxUses").toString()));

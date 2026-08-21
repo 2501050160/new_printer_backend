@@ -42,6 +42,9 @@ public class CouponService {
             if (coupon.getDiscountAmount() != null) {
                 existing.setDiscountAmount(coupon.getDiscountAmount());
             }
+            if (coupon.getMinOrderAmount() != null) {
+                existing.setMinOrderAmount(coupon.getMinOrderAmount());
+            }
             if (coupon.getExpiryDate() != null) {
                 existing.setExpiryDate(coupon.getExpiryDate());
             }
