@@ -36,6 +36,15 @@ public class BotPrintController {
     @Autowired
     private com.saipraveen.login_registration.repository.UserRepository userRepository;
 
+    @Autowired
+    private com.saipraveen.login_registration.repository.CampusBlockRepository campusBlockRepository;
+
+    @Autowired
+    private com.saipraveen.login_registration.service.PricingService pricingService;
+
+    @Autowired
+    private com.saipraveen.login_registration.service.SystemSettingService systemSettingService;
+
     @org.springframework.beans.factory.annotation.Value("${app.frontend.url:https://cloudprint.website}")
     private String frontendUrl;
 
@@ -80,6 +89,15 @@ public class BotPrintController {
                 : "Student";
             String fullNameWithPhone = displayName + " (+91 " + cleanPhone + ")";
 
+            // Determine campus/college from kiosk location
+            String college = "KLU";
+            if (blockLocation != null && !blockLocation.isEmpty()) {
+                com.saipraveen.login_registration.entity.CampusBlock blk = campusBlockRepository.findByName(blockLocation);
+                if (blk != null && blk.getCollege() != null) {
+                    college = blk.getCollege();
+                }
+            }
+
             com.saipraveen.login_registration.entity.User user = userRepository.findByEmail(waEmail);
             if (user == null) {
                 user = new com.saipraveen.login_registration.entity.User();
@@ -87,11 +105,22 @@ public class BotPrintController {
                 user.setEmail(waEmail);
                 user.setPassword("WA_BOT_USER_NOPASS");
                 user.setWalletBalance(0.0);
+                user.setCollege(college);
                 user.setReferralCode("WA_" + cleanPhone);
                 user = userRepository.save(user);
-            } else if (!user.getName().contains("+91 " + cleanPhone)) {
-                user.setName(fullNameWithPhone);
-                user = userRepository.save(user);
+            } else {
+                boolean changed = false;
+                if (!user.getName().contains("+91 " + cleanPhone)) {
+                    user.setName(fullNameWithPhone);
+                    changed = true;
+                }
+                if (user.getCollege() == null || !user.getCollege().equalsIgnoreCase(college)) {
+                    user.setCollege(college);
+                    changed = true;
+                }
+                if (changed) {
+                    user = userRepository.save(user);
+                }
             }
 
             // Save PDF to DB linked to the unique WhatsApp User ID
@@ -99,7 +128,7 @@ public class BotPrintController {
             pdf.setOrderChannel("WHATSAPP");
             pdf = pdfFileRepository.save(pdf);
 
-            // Update order details to generate real Order ID
+            // Update order details to generate real Order ID and calculate college-wise pricing
             PdfFile updated = pdfFileService.updateOrder(
                     pdf.getOrderId(),
                     copies != null ? copies : 1,
@@ -114,8 +143,11 @@ public class BotPrintController {
 
             // Calculate details from updated PDF
             int pages = updated.getTotalPages() != null ? updated.getTotalPages() : 1;
-            double rate = "COLOR".equalsIgnoreCase(printType) ? 5.0 : 2.0;
-            double estimatedTotal = updated.getPrice() != null ? updated.getPrice() : (pages * rate);
+            Double rate = pricingService.getPrice(printType, blockLocation);
+            if (rate == null || rate == 0.0) {
+                rate = "COLOR".equalsIgnoreCase(printType) ? 5.0 : 2.0;
+            }
+            double estimatedTotal = updated.getPrice() != null ? updated.getPrice() : (pages * rate * (copies != null ? copies : 1));
 
             // Generate 4-digit OTP from order ID and attach to order
             String otp = String.format("%04d", (updated.getId() != null ? updated.getId() : 1000) % 10000);
@@ -128,7 +160,11 @@ public class BotPrintController {
             botMsg.append("🖨️ *Cloud Print Order Created!*\n");
             botMsg.append("-----------------------------\n");
             botMsg.append("📄 *File*: ").append(file.getOriginalFilename()).append("\n");
+            botMsg.append("🏫 *Campus*: ").append(college).append(" (").append(blockLocation).append(")\n");
             botMsg.append("📊 *Pages*: ").append(pages).append(" | *Print Type*: ").append(printType).append("\n");
+            if (updated.getDiscountAmount() != null && updated.getDiscountAmount() > 0) {
+                botMsg.append("🏷️ *Discount Applied*: -₹").append(String.format("%.2f", updated.getDiscountAmount())).append("\n");
+            }
             botMsg.append("💰 *Total Amount*: ₹").append(String.format("%.2f", estimatedTotal)).append("\n");
             botMsg.append("🔐 *Your 4-Digit OTP*: *").append(otp).append("*\n");
             botMsg.append("📍 *Target Kiosk*: ").append(blockLocation).append("\n\n");
@@ -139,6 +175,9 @@ public class BotPrintController {
             response.put("orderId", realOrderId);
             response.put("otp", otp);
             response.put("totalPages", pages);
+            response.put("college", college);
+            response.put("ratePerPage", rate);
+            response.put("discountAmount", updated.getDiscountAmount() != null ? updated.getDiscountAmount() : 0.0);
             response.put("estimatedTotal", estimatedTotal);
             response.put("blockLocation", blockLocation);
             response.put("paymentUrl", checkoutUrl);
@@ -345,6 +384,63 @@ public class BotPrintController {
         Map<String, Object> res = new HashMap<>();
         res.put("status", "success");
         res.put("message", "WhatsApp message received successfully");
+        return ResponseEntity.ok(res);
+    }
+
+    @org.springframework.web.bind.annotation.GetMapping("/college-prices")
+    public ResponseEntity<?> getCollegePrices(
+            @RequestParam(defaultValue = "KLU") String college,
+            @RequestParam(required = false) String blockLocation
+    ) {
+        String targetBlock = blockLocation;
+        if (targetBlock == null || targetBlock.isEmpty()) {
+            java.util.List<com.saipraveen.login_registration.entity.CampusBlock> blks = campusBlockRepository.findByCollege(college);
+            if (blks != null && !blks.isEmpty()) {
+                targetBlock = blks.get(0).getName();
+            } else {
+                targetBlock = "C Block";
+            }
+        }
+        Double bwRate = pricingService.getPrice("BW", targetBlock);
+        if (bwRate == null || bwRate == 0.0) bwRate = 2.0;
+        Double colorRate = pricingService.getPrice("COLOR", targetBlock);
+        if (colorRate == null || colorRate == 0.0) colorRate = 5.0;
+        Double duplexRate = pricingService.getPrice("DUPLEX", targetBlock);
+        if (duplexRate == null || duplexRate == 0.0) duplexRate = 2.0;
+
+        boolean offpeakEnabled = systemSettingService.getSettingBool("offpeak_enabled_" + college, systemSettingService.getSettingBool("offpeak_enabled", true));
+        double offpeakDiscountPercent = systemSettingService.getSettingDouble("offpeak_discount_percent_" + college, systemSettingService.getSettingDouble("offpeak_discount_percent", 15.0));
+
+        boolean thesisEnabled = systemSettingService.getSettingBool("thesis_enabled_" + college, systemSettingService.getSettingBool("thesis_enabled", true));
+        double thesisDiscountPercent = systemSettingService.getSettingDouble("thesis_discount_percent_" + college, systemSettingService.getSettingDouble("thesis_discount_percent", 15.0));
+        double thesisDiscountPages = systemSettingService.getSettingDouble("thesis_discount_pages_" + college, systemSettingService.getSettingDouble("thesis_discount_pages", 500.0));
+
+        Map<String, Object> res = new HashMap<>();
+        res.put("college", college);
+        res.put("blockLocation", targetBlock);
+        res.put("bwPricePerPage", bwRate);
+        res.put("colorPricePerPage", colorRate);
+        res.put("duplexPricePerPage", duplexRate);
+        res.put("offpeakEnabled", offpeakEnabled);
+        res.put("offpeakDiscountPercent", offpeakDiscountPercent);
+        res.put("thesisEnabled", thesisEnabled);
+        res.put("thesisDiscountPercent", thesisDiscountPercent);
+        res.put("thesisDiscountPages", thesisDiscountPages);
+
+        StringBuilder info = new StringBuilder();
+        info.append("🏫 *Print Rates for ").append(college).append(" Campus*\n");
+        info.append("-----------------------------\n");
+        info.append("📄 *B&W Print*: ₹").append(String.format("%.2f", bwRate)).append("/page\n");
+        info.append("🎨 *Color Print*: ₹").append(String.format("%.2f", colorRate)).append("/page\n");
+        info.append("🔄 *Double-Sided (Duplex)*: ₹").append(String.format("%.2f", duplexRate)).append("/page\n");
+        if (offpeakEnabled) {
+            info.append("🌙 *Off-Peak Hours*: ").append(offpeakDiscountPercent).append("% OFF active during night/morning windows\n");
+        }
+        if (thesisEnabled) {
+            info.append("📚 *Bulk/Thesis Discount*: ").append(thesisDiscountPercent).append("% OFF for orders ≥ ").append((int)thesisDiscountPages).append(" pages\n");
+        }
+        res.put("formattedMessage", info.toString());
+
         return ResponseEntity.ok(res);
     }
 }
