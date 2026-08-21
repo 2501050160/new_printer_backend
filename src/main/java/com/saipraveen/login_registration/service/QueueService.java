@@ -35,7 +35,7 @@ public class QueueService {
     @Value("${print.cancel-window-seconds:30}")
     private int cancelWindowSeconds;
 
-    @Value("${print.fulfillment-timeout-minutes:5}")
+    @Value("${print.fulfillment-timeout-minutes:1440}")
     private int fulfillmentTimeoutMinutes;
 
     @Scheduled(fixedRate = 5000)
@@ -96,13 +96,13 @@ public class QueueService {
             );
         }
 
-        // 10-Minute PENDING_SCAN verification timeout
-        LocalDateTime scanCutoff = LocalDateTime.now().minusMinutes(10);
+        // 24-Hour PENDING_SCAN verification timeout
+        LocalDateTime scanCutoff = LocalDateTime.now().minusHours(24);
         List<PdfFile> scanTimedOut = repository.findExpiredPendingScanOrders(scanCutoff);
         for (PdfFile pdf : scanTimedOut) {
             refundAndCancel(
                     pdf,
-                    "QR/OTP Scan verification timeout (10 minutes)"
+                    "QR/OTP Scan verification timeout (24 hours)"
             );
 
             System.out.println(
