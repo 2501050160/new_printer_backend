@@ -135,14 +135,23 @@ public class AdminController {
         if (sql == null || sql.trim().isEmpty()) {
             return ResponseEntity.badRequest().body("Query cannot be empty");
         }
-        
-        String trimmed = sql.trim().toLowerCase();
+
+        // Auto-map convenience table aliases to actual database tables
+        String processedSql = sql
+                .replaceAll("(?i)\\bprint_orders\\b", "pdf_files")
+                .replaceAll("(?i)\\bcolleges\\b", "college_configs")
+                .replaceAll("(?i)\\bblocks\\b", "campus_blocks")
+                .replaceAll("(?i)\\bprinters\\b", "printer_config")
+                .replaceAll("(?i)\\bwhatsapp_orders\\b", "(SELECT * FROM pdf_files WHERE order_channel = 'WHATSAPP' OR user_email LIKE 'wa_%') AS whatsapp_orders")
+                .replaceAll("(?i)\\bwallets\\b", "(SELECT id, name, email, wallet_balance, college FROM users WHERE wallet_balance > 0) AS wallets");
+
+        String trimmed = processedSql.trim().toLowerCase();
         try {
-            if (trimmed.startsWith("select") || trimmed.startsWith("show") || trimmed.startsWith("describe")) {
-                java.util.List<java.util.Map<String, Object>> result = jdbcTemplate.queryForList(sql);
+            if (trimmed.startsWith("select") || trimmed.startsWith("show") || trimmed.startsWith("describe") || trimmed.startsWith("explain")) {
+                java.util.List<java.util.Map<String, Object>> result = jdbcTemplate.queryForList(processedSql);
                 return ResponseEntity.ok(result);
             } else {
-                int rowsAffected = jdbcTemplate.update(sql);
+                int rowsAffected = jdbcTemplate.update(processedSql);
                 java.util.Map<String, Object> res = new java.util.HashMap<>();
                 res.put("success", true);
                 res.put("rowsAffected", rowsAffected);
