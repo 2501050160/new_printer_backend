@@ -1,0 +1,6 @@
+{
+  "couponCode": "SAVE10",
+  "discountPercentage": 10.0,
+  "minOrderAmount": 50.0,
+  "maxUses": 100
+}
