@@ -10,6 +10,7 @@ import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -27,6 +28,13 @@ public class CouponController {
 
     @Autowired
     private CouponService service;
+
+    @ExceptionHandler(Throwable.class)
+    public ResponseEntity<?> handleException(Throwable t) {
+        t.printStackTrace();
+        String msg = t.getMessage() != null ? t.getMessage() : t.toString();
+        return ResponseEntity.status(500).body(Map.of("error", msg, "class", t.getClass().getName()));
+    }
 
     private Map<String, Object> mapCoupon(Coupon c) {
         if (c == null) return Collections.emptyMap();
@@ -94,10 +102,10 @@ public class CouponController {
             }
             Coupon saved = service.createCoupon(coupon);
             return ResponseEntity.ok(mapCoupon(saved));
-        } catch (Exception e) {
+        } catch (Throwable e) {
             e.printStackTrace();
             System.err.println("Error in createCoupon: " + e.getMessage());
-            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage() != null ? e.getMessage() : "Failed to create coupon"));
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage() != null ? e.getMessage() : e.toString(), "class", e.getClass().getName()));
         }
     }
 
@@ -120,8 +128,8 @@ public class CouponController {
             coupon.setActive(true);
             Coupon saved = service.createCoupon(coupon);
             return ResponseEntity.ok(mapCoupon(saved));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        } catch (Throwable e) {
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage() != null ? e.getMessage() : e.toString()));
         }
     }
 
@@ -136,7 +144,7 @@ public class CouponController {
                 }
             }
             return ResponseEntity.ok(result);
-        } catch (Exception e) {
+        } catch (Throwable e) {
             e.printStackTrace();
             System.err.println("Error in getCoupons: " + e.getMessage());
             return ResponseEntity.ok(Collections.emptyList());
@@ -148,7 +156,7 @@ public class CouponController {
         try {
             Coupon c = service.validateCoupon(couponCode);
             return ResponseEntity.ok(mapCoupon(c));
-        } catch (Exception e) {
+        } catch (Throwable e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage() != null ? e.getMessage() : "Invalid coupon"));
         }
     }
@@ -158,7 +166,7 @@ public class CouponController {
         try {
             Coupon c = service.useCoupon(couponCode);
             return ResponseEntity.ok(mapCoupon(c));
-        } catch (Exception e) {
+        } catch (Throwable e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage() != null ? e.getMessage() : "Failed to use coupon"));
         }
     }
@@ -168,7 +176,7 @@ public class CouponController {
         try {
             service.deleteCoupon(id);
             return ResponseEntity.ok(Map.of("message", "Coupon Deleted"));
-        } catch (Exception e) {
+        } catch (Throwable e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage() != null ? e.getMessage() : "Failed to delete coupon"));
         }
     }
