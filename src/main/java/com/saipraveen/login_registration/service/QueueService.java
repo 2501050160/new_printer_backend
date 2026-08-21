@@ -96,13 +96,13 @@ public class QueueService {
             );
         }
 
-        // 24-Hour PENDING_SCAN verification timeout
-        LocalDateTime scanCutoff = LocalDateTime.now().minusHours(24);
+        // 10-Minute PENDING_SCAN verification timeout (auto-refund if no OTP entered)
+        LocalDateTime scanCutoff = LocalDateTime.now().minusMinutes(10);
         List<PdfFile> scanTimedOut = repository.findExpiredPendingScanOrders(scanCutoff);
         for (PdfFile pdf : scanTimedOut) {
             refundAndCancel(
                     pdf,
-                    "QR/OTP Scan verification timeout (24 hours)"
+                    "QR/OTP Scan verification timeout (10 minutes)"
             );
 
             System.out.println(
