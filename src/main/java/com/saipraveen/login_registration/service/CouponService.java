@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,11 +13,57 @@ import org.springframework.transaction.annotation.Transactional;
 import com.saipraveen.login_registration.entity.Coupon;
 import com.saipraveen.login_registration.repository.CouponRepository;
 
+import jakarta.annotation.PostConstruct;
+
 @Service
 public class CouponService {
 
     @Autowired
     private CouponRepository repository;
+
+    @Autowired(required = false)
+    private JdbcTemplate jdbcTemplate;
+
+    @PostConstruct
+    public void initCouponSchema() {
+        if (jdbcTemplate != null) {
+            try {
+                jdbcTemplate.execute(
+                    "CREATE TABLE IF NOT EXISTS coupons (" +
+                    "  id BIGSERIAL PRIMARY KEY," +
+                    "  coupon_code VARCHAR(255)," +
+                    "  discount_percentage DOUBLE PRECISION DEFAULT 0.0," +
+                    "  discount_amount DOUBLE PRECISION DEFAULT 0.0," +
+                    "  min_order_amount DOUBLE PRECISION DEFAULT 0.0," +
+                    "  expiry_date DATE," +
+                    "  max_uses INT DEFAULT 100," +
+                    "  used_count INT DEFAULT 0," +
+                    "  active BOOLEAN DEFAULT TRUE" +
+                    ")"
+                );
+                String[] alterCols = {
+                    "ALTER TABLE coupons ADD COLUMN IF NOT EXISTS discount_amount DOUBLE PRECISION DEFAULT 0.0",
+                    "ALTER TABLE coupons ADD COLUMN IF NOT EXISTS min_order_amount DOUBLE PRECISION DEFAULT 0.0",
+                    "ALTER TABLE coupons ADD COLUMN IF NOT EXISTS discount_percentage DOUBLE PRECISION DEFAULT 0.0",
+                    "ALTER TABLE coupons ADD COLUMN IF NOT EXISTS max_uses INT DEFAULT 100",
+                    "ALTER TABLE coupons ADD COLUMN IF NOT EXISTS used_count INT DEFAULT 0",
+                    "ALTER TABLE coupons ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT TRUE",
+                    "ALTER TABLE coupons ADD COLUMN IF NOT EXISTS expiry_date DATE",
+                    "ALTER TABLE coupons ADD COLUMN IF NOT EXISTS coupon_code VARCHAR(255)"
+                };
+                for (String sql : alterCols) {
+                    try {
+                        jdbcTemplate.execute(sql);
+                    } catch (Exception colEx) {
+                        // ignore column already exists
+                    }
+                }
+                System.out.println("✅ Coupon schema auto-migration completed successfully!");
+            } catch (Exception e) {
+                System.err.println("Warning: Coupon schema auto-migration notice: " + e.getMessage());
+            }
+        }
+    }
 
     private Coupon findFirstCoupon(String code) {
         if (code == null) return null;
