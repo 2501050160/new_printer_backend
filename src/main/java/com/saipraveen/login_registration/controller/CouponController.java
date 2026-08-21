@@ -1,7 +1,10 @@
 package com.saipraveen.login_registration.controller;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +27,21 @@ public class CouponController {
 
     @Autowired
     private CouponService service;
+
+    private Map<String, Object> mapCoupon(Coupon c) {
+        if (c == null) return Collections.emptyMap();
+        Map<String, Object> m = new HashMap<>();
+        m.put("id", c.getId());
+        m.put("couponCode", c.getCouponCode());
+        m.put("discountPercentage", c.getDiscountPercentage() != null ? c.getDiscountPercentage() : 0.0);
+        m.put("discountAmount", c.getDiscountAmount() != null ? c.getDiscountAmount() : 0.0);
+        m.put("minOrderAmount", c.getMinOrderAmount() != null ? c.getMinOrderAmount() : 0.0);
+        m.put("expiryDate", c.getExpiryDate() != null ? c.getExpiryDate().toString() : null);
+        m.put("maxUses", c.getMaxUses() != null ? c.getMaxUses() : 100);
+        m.put("usedCount", c.getUsedCount() != null ? c.getUsedCount() : 0);
+        m.put("active", c.getActive() != null ? c.getActive() : true);
+        return m;
+    }
 
     @PostMapping("/create")
     public ResponseEntity<?> createCoupon(@RequestBody(required = false) Map<String, Object> body) {
@@ -75,7 +93,7 @@ public class CouponController {
                 }
             }
             Coupon saved = service.createCoupon(coupon);
-            return ResponseEntity.ok(saved);
+            return ResponseEntity.ok(mapCoupon(saved));
         } catch (Exception e) {
             e.printStackTrace();
             System.err.println("Error in createCoupon: " + e.getMessage());
@@ -101,7 +119,7 @@ public class CouponController {
             coupon.setUsedCount(0);
             coupon.setActive(true);
             Coupon saved = service.createCoupon(coupon);
-            return ResponseEntity.ok(saved);
+            return ResponseEntity.ok(mapCoupon(saved));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
@@ -110,7 +128,14 @@ public class CouponController {
     @GetMapping("/all")
     public ResponseEntity<?> getCoupons() {
         try {
-            return ResponseEntity.ok(service.getAllCoupons());
+            List<Coupon> raw = service.getAllCoupons();
+            List<Map<String, Object>> result = new ArrayList<>();
+            if (raw != null) {
+                for (Coupon c : raw) {
+                    result.add(mapCoupon(c));
+                }
+            }
+            return ResponseEntity.ok(result);
         } catch (Exception e) {
             e.printStackTrace();
             System.err.println("Error in getCoupons: " + e.getMessage());
@@ -121,7 +146,8 @@ public class CouponController {
     @GetMapping("/validate")
     public ResponseEntity<?> validateCoupon(@RequestParam String couponCode) {
         try {
-            return ResponseEntity.ok(service.validateCoupon(couponCode));
+            Coupon c = service.validateCoupon(couponCode);
+            return ResponseEntity.ok(mapCoupon(c));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage() != null ? e.getMessage() : "Invalid coupon"));
         }
@@ -130,7 +156,8 @@ public class CouponController {
     @PostMapping("/use")
     public ResponseEntity<?> useCoupon(@RequestParam String couponCode) {
         try {
-            return ResponseEntity.ok(service.useCoupon(couponCode));
+            Coupon c = service.useCoupon(couponCode);
+            return ResponseEntity.ok(mapCoupon(c));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage() != null ? e.getMessage() : "Failed to use coupon"));
         }
