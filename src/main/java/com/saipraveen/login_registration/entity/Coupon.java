@@ -1,7 +1,5 @@
 package com.saipraveen.login_registration.entity;
 
-import java.time.LocalDate;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -40,6 +38,19 @@ public class Coupon {
 
     @Column(name = "active")
     private Boolean active = true;
+
+    public Coupon() {}
+
+    public Coupon(String couponCode, Double discountPercentage, Double discountAmount, Double minOrderAmount, String expiryDate, Integer maxUses, Integer usedCount, Boolean active) {
+        this.couponCode = couponCode;
+        this.discountPercentage = discountPercentage;
+        this.discountAmount = discountAmount;
+        this.minOrderAmount = minOrderAmount;
+        this.expiryDate = expiryDate;
+        this.maxUses = maxUses;
+        this.usedCount = usedCount;
+        this.active = active;
+    }
 
     public Long getId() {
         return id;
