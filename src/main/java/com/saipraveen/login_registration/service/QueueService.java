@@ -35,7 +35,7 @@ public class QueueService {
     @Value("${print.cancel-window-seconds:30}")
     private int cancelWindowSeconds;
 
-    @Value("${print.fulfillment-timeout-minutes:1440}")
+    @Value("${print.fulfillment-timeout-minutes:5}")
     private int fulfillmentTimeoutMinutes;
 
     @Scheduled(fixedRate = 5000)
