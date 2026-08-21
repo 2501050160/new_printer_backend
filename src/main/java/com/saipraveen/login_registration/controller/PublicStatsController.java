@@ -1,20 +1,23 @@
 package com.saipraveen.login_registration.controller;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.saipraveen.login_registration.repository.CouponRepository;
 import com.saipraveen.login_registration.repository.PdfFileRepository;
 import com.saipraveen.login_registration.repository.PrinterConfigRepository;
 
-import java.util.HashMap;
-import java.util.Map;
-
 @RestController
 @RequestMapping("/api/public/stats")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = "*")
 public class PublicStatsController {
 
     @Autowired
@@ -22,6 +25,12 @@ public class PublicStatsController {
 
     @Autowired
     private PrinterConfigRepository printerConfigRepository;
+
+    @Autowired(required = false)
+    private CouponRepository couponRepository;
+
+    @Autowired(required = false)
+    private JdbcTemplate jdbcTemplate;
 
     @GetMapping
     public Map<String, Object> getLandingStats() {
@@ -47,5 +56,21 @@ public class PublicStatsController {
         stats.put("successRate", successRate);
 
         return stats;
+    }
+
+    @GetMapping("/coupons")
+    public Object getPublicCoupons() {
+        try {
+            if (couponRepository != null) {
+                return couponRepository.findAll();
+            }
+            if (jdbcTemplate != null) {
+                return jdbcTemplate.queryForList("SELECT * FROM coupons");
+            }
+            return Collections.emptyList();
+        } catch (Throwable e) {
+            e.printStackTrace();
+            return Map.of("error", e.getMessage() != null ? e.getMessage() : e.toString(), "class", e.getClass().getName());
+        }
     }
 }
