@@ -383,9 +383,9 @@ public PdfFile updateOrder(
     boolean isOffPeak = offpeakEnabled && (isMorningOffPeak || isEveningOffPeak);
     double dynamicDiscountPercent = isOffPeak ? offpeakDiscountPercent : 0.0;
 
-    // 2. Thesis/Bulk print discount
-    double thesisDiscountPercent = systemSettingService.getSettingDouble("thesis_discount_percent", 15.0);
-    double thesisDiscountPages = systemSettingService.getSettingDouble("thesis_discount_pages", 50.0);
+    // 2. Thesis/Bulk print discount (College-wise)
+    double thesisDiscountPercent = systemSettingService.getSettingDouble("thesis_discount_percent_" + college, systemSettingService.getSettingDouble("thesis_discount_percent", 15.0));
+    double thesisDiscountPages = systemSettingService.getSettingDouble("thesis_discount_pages_" + college, systemSettingService.getSettingDouble("thesis_discount_pages", 50.0));
     double thesisDiscount = 0.0;
     int totalPagesToPrint = pages * (copies != null ? copies : 1);
     if (totalPagesToPrint >= (int) thesisDiscountPages) {

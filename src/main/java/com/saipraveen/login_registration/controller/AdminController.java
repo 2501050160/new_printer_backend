@@ -286,6 +286,29 @@ public class AdminController {
         return ResponseEntity.ok("College off-peak settings updated successfully");
     }
 
+    @org.springframework.web.bind.annotation.GetMapping("/settings/thesis")
+    public ResponseEntity<?> getCollegeThesisSettings(@org.springframework.web.bind.annotation.RequestParam(defaultValue = "KLU") String college) {
+        java.util.Map<String, Object> settings = new java.util.HashMap<>();
+        settings.put("thesisDiscountPages", systemSettingService.getSettingDouble("thesis_discount_pages_" + college, systemSettingService.getSettingDouble("thesis_discount_pages", 50.0)));
+        settings.put("thesisDiscountPercent", systemSettingService.getSettingDouble("thesis_discount_percent_" + college, systemSettingService.getSettingDouble("thesis_discount_percent", 15.0)));
+        return ResponseEntity.ok(settings);
+    }
+
+    @PostMapping("/settings/thesis/update")
+    public ResponseEntity<?> updateCollegeThesisSettings(
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "KLU") String college,
+            @RequestBody java.util.Map<String, Object> request) {
+        if (request.containsKey("thesisDiscountPages")) {
+            systemSettingService.setSetting("thesis_discount_pages_" + college, String.valueOf(request.get("thesisDiscountPages")));
+            systemSettingService.setSetting("thesis_discount_pages", String.valueOf(request.get("thesisDiscountPages")));
+        }
+        if (request.containsKey("thesisDiscountPercent")) {
+            systemSettingService.setSetting("thesis_discount_percent_" + college, String.valueOf(request.get("thesisDiscountPercent")));
+            systemSettingService.setSetting("thesis_discount_percent", String.valueOf(request.get("thesisDiscountPercent")));
+        }
+        return ResponseEntity.ok("Thesis & Bulk Print settings updated for " + college);
+    }
+
     @org.springframework.web.bind.annotation.GetMapping("/printers/status")
     public ResponseEntity<?> getPrintersStatus() {
         return ResponseEntity.ok(pdfFileService.getPrinterLiveStatusList());
