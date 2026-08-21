@@ -88,16 +88,13 @@ public class CouponController {
                     coupon.setActive(Boolean.parseBoolean(body.get("active").toString()));
                 }
                 if (body.get("expiryDate") != null && !body.get("expiryDate").toString().trim().isEmpty()) {
-                    try {
-                        String dateStr = body.get("expiryDate").toString().trim();
-                        if (dateStr.contains("T")) {
-                            dateStr = dateStr.split("T")[0];
-                        }
-                        coupon.setExpiryDate(LocalDate.parse(dateStr));
-                    } catch (Exception e) {
-                        System.err.println("Warning: Invalid date format for coupon expiryDate: " + body.get("expiryDate"));
-                        coupon.setExpiryDate(LocalDate.now().plusDays(30));
+                    String dateStr = body.get("expiryDate").toString().trim();
+                    if (dateStr.contains("T")) {
+                        dateStr = dateStr.split("T")[0];
                     }
+                    coupon.setExpiryDate(dateStr);
+                } else {
+                    coupon.setExpiryDate(LocalDate.now().plusDays(30).toString());
                 }
             }
             Coupon saved = service.createCoupon(coupon);
@@ -122,7 +119,7 @@ public class CouponController {
             coupon.setCouponCode(couponCode);
             coupon.setDiscountAmount(amount != null && amount > 0 ? amount : 2.0);
             coupon.setDiscountPercentage(0.0);
-            coupon.setExpiryDate(LocalDate.now().plusDays(7));
+            coupon.setExpiryDate(LocalDate.now().plusDays(7).toString());
             coupon.setMaxUses(1);
             coupon.setUsedCount(0);
             coupon.setActive(true);

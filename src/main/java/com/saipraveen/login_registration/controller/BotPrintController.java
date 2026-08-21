@@ -257,7 +257,7 @@ public class BotPrintController {
                 coupon.setDiscountPercentage(0.0);
                 coupon.setMaxUses(1);
                 coupon.setUsedCount(0);
-                coupon.setExpiryDate(java.time.LocalDate.now().plusDays(7));
+                coupon.setExpiryDate(java.time.LocalDate.now().plusDays(7).toString());
                 coupon.setActive(true);
                 coupon = couponRepository.save(coupon);
             }
@@ -269,7 +269,17 @@ public class BotPrintController {
             return ResponseEntity.ok(res);
         }
 
-        if (coupon.getExpiryDate() != null && coupon.getExpiryDate().isBefore(java.time.LocalDate.now())) {
+        boolean isExpired = false;
+        if (coupon.getExpiryDate() != null && !coupon.getExpiryDate().trim().isEmpty()) {
+            try {
+                java.time.LocalDate date = java.time.LocalDate.parse(coupon.getExpiryDate().trim());
+                if (date.isBefore(java.time.LocalDate.now())) {
+                    isExpired = true;
+                }
+            } catch (Exception ignored) {}
+        }
+
+        if (isExpired) {
             coupon.setActive(false);
             couponRepository.save(coupon);
             res.put("success", false);

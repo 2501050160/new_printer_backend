@@ -30,7 +30,7 @@ public class Coupon {
     private Double minOrderAmount = 0.0;
 
     @Column(name = "expiry_date")
-    private LocalDate expiryDate;
+    private String expiryDate;
 
     @Column(name = "max_uses")
     private Integer maxUses = 100;
@@ -81,11 +81,11 @@ public class Coupon {
         this.minOrderAmount = minOrderAmount;
     }
 
-    public LocalDate getExpiryDate() {
+    public String getExpiryDate() {
         return expiryDate;
     }
 
-    public void setExpiryDate(LocalDate expiryDate) {
+    public void setExpiryDate(String expiryDate) {
         this.expiryDate = expiryDate;
     }
 

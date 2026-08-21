@@ -48,8 +48,9 @@ public class CouponService {
                     "ALTER TABLE coupons ADD COLUMN IF NOT EXISTS max_uses INT DEFAULT 100",
                     "ALTER TABLE coupons ADD COLUMN IF NOT EXISTS used_count INT DEFAULT 0",
                     "ALTER TABLE coupons ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT TRUE",
-                    "ALTER TABLE coupons ADD COLUMN IF NOT EXISTS expiry_date DATE",
-                    "ALTER TABLE coupons ADD COLUMN IF NOT EXISTS coupon_code VARCHAR(255)"
+                    "ALTER TABLE coupons ADD COLUMN IF NOT EXISTS expiry_date VARCHAR(255)",
+                    "ALTER TABLE coupons ADD COLUMN IF NOT EXISTS coupon_code VARCHAR(255)",
+                    "ALTER TABLE coupons ALTER COLUMN expiry_date TYPE VARCHAR(255) USING expiry_date::text"
                 };
                 for (String sql : alterCols) {
                     try {
@@ -119,8 +120,8 @@ public class CouponService {
             coupon.setDiscountPercentage(95.0);
         }
 
-        if (coupon.getExpiryDate() == null) {
-            coupon.setExpiryDate(LocalDate.now().plusDays(30));
+        if (coupon.getExpiryDate() == null || coupon.getExpiryDate().trim().isEmpty()) {
+            coupon.setExpiryDate(LocalDate.now().plusDays(30).toString());
         }
 
         if (coupon.getMaxUses() == null || coupon.getMaxUses() < 1) {
@@ -166,7 +167,7 @@ public class CouponService {
                 coupon.setMinOrderAmount(0.0);
                 coupon.setMaxUses(1);
                 coupon.setUsedCount(0);
-                coupon.setExpiryDate(LocalDate.now().plusDays(7));
+                coupon.setExpiryDate(LocalDate.now().plusDays(7).toString());
                 coupon.setActive(true);
                 coupon = repository.save(coupon);
             } else {
@@ -177,7 +178,15 @@ public class CouponService {
             throw new RuntimeException("Coupon Disabled");
         }
 
-        boolean expired = coupon.getExpiryDate() != null && coupon.getExpiryDate().isBefore(LocalDate.now().minusDays(1));
+        boolean expired = false;
+        if (coupon.getExpiryDate() != null && !coupon.getExpiryDate().trim().isEmpty()) {
+            try {
+                LocalDate date = LocalDate.parse(coupon.getExpiryDate().trim());
+                if (date.isBefore(LocalDate.now().minusDays(1))) {
+                    expired = true;
+                }
+            } catch (Exception ignored) {}
+        }
         boolean fullyUsed = coupon.getUsedCount() != null && coupon.getMaxUses() != null && coupon.getMaxUses() > 0 && coupon.getUsedCount() >= coupon.getMaxUses();
         if (expired || fullyUsed) {
             throw new RuntimeException(expired ? "Coupon Expired" : "Coupon Usage Limit Reached");
@@ -201,7 +210,7 @@ public class CouponService {
                 coupon.setMinOrderAmount(0.0);
                 coupon.setMaxUses(1);
                 coupon.setUsedCount(0);
-                coupon.setExpiryDate(LocalDate.now().plusDays(7));
+                coupon.setExpiryDate(LocalDate.now().plusDays(7).toString());
                 coupon.setActive(true);
                 coupon = repository.save(coupon);
             } else {
@@ -232,7 +241,15 @@ public class CouponService {
             List<Coupon> toDelete = new ArrayList<>();
             for (Coupon coupon : allCoupons) {
                 if (coupon == null) continue;
-                boolean expired = coupon.getExpiryDate() != null && coupon.getExpiryDate().isBefore(yesterday);
+                boolean expired = false;
+                if (coupon.getExpiryDate() != null && !coupon.getExpiryDate().trim().isEmpty()) {
+                    try {
+                        LocalDate date = LocalDate.parse(coupon.getExpiryDate().trim());
+                        if (date.isBefore(yesterday)) {
+                            expired = true;
+                        }
+                    } catch (Exception ignored) {}
+                }
                 boolean fullyUsed = coupon.getUsedCount() != null && coupon.getMaxUses() != null && coupon.getMaxUses() > 0 && coupon.getUsedCount() >= coupon.getMaxUses();
                 if (expired || fullyUsed) {
                     toDelete.add(coupon);
