@@ -7,4 +7,6 @@ public interface CampusBlockRepository extends JpaRepository<CampusBlock, Long> 
     CampusBlock findByName(String name);
     CampusBlock findByNameIgnoreCase(String name);
     CampusBlock findByServerApiKey(String serverApiKey);
+    java.util.List<CampusBlock> findByCollege(String college);
+    java.util.List<CampusBlock> findByCollegeIgnoreCase(String college);
 }

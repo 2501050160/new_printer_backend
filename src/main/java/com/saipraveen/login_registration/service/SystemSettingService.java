@@ -41,4 +41,13 @@ public class SystemSettingService {
             return defaultValue;
         }
     }
+
+    public int getSettingInt(String key, int defaultValue) {
+        String val = getSetting(key, null);
+        try {
+            return val != null ? Integer.parseInt(val) : defaultValue;
+        } catch (Exception e) {
+            return defaultValue;
+        }
+    }
 }
