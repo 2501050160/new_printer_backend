@@ -314,6 +314,34 @@ public class AdminController {
         return ResponseEntity.ok("Thesis & Bulk Print settings updated for " + college);
     }
 
+    @org.springframework.web.bind.annotation.GetMapping("/settings/platform")
+    public ResponseEntity<?> getCollegePlatformSettings(@org.springframework.web.bind.annotation.RequestParam(defaultValue = "KLU") String college) {
+        java.util.Map<String, Object> settings = new java.util.HashMap<>();
+        settings.put("razorpayChargePercentage", systemSettingService.getSettingDouble("razorpay_charge_percentage_" + college, systemSettingService.getSettingDouble("razorpay_charge_percentage", 2.36)));
+        settings.put("managerMaxBwPrinters", systemSettingService.getSettingInt("manager_max_bw_printers_" + college, systemSettingService.getSettingInt("manager_max_bw_printers", 1)));
+        settings.put("managerMaxColorPrinters", systemSettingService.getSettingInt("manager_max_color_printers_" + college, systemSettingService.getSettingInt("manager_max_color_printers", 1)));
+        return ResponseEntity.ok(settings);
+    }
+
+    @PostMapping("/settings/platform/update")
+    public ResponseEntity<?> updateCollegePlatformSettings(
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "KLU") String college,
+            @RequestBody java.util.Map<String, Object> request) {
+        if (request.containsKey("razorpayChargePercentage")) {
+            systemSettingService.setSetting("razorpay_charge_percentage_" + college, String.valueOf(request.get("razorpayChargePercentage")));
+            systemSettingService.setSetting("razorpay_charge_percentage", String.valueOf(request.get("razorpayChargePercentage")));
+        }
+        if (request.containsKey("managerMaxBwPrinters")) {
+            systemSettingService.setSetting("manager_max_bw_printers_" + college, String.valueOf(request.get("managerMaxBwPrinters")));
+            systemSettingService.setSetting("manager_max_bw_printers", String.valueOf(request.get("managerMaxBwPrinters")));
+        }
+        if (request.containsKey("managerMaxColorPrinters")) {
+            systemSettingService.setSetting("manager_max_color_printers_" + college, String.valueOf(request.get("managerMaxColorPrinters")));
+            systemSettingService.setSetting("manager_max_color_printers", String.valueOf(request.get("managerMaxColorPrinters")));
+        }
+        return ResponseEntity.ok("Platform settings updated for " + college);
+    }
+
     @org.springframework.web.bind.annotation.GetMapping("/printers/status")
     public ResponseEntity<?> getPrintersStatus() {
         return ResponseEntity.ok(pdfFileService.getPrinterLiveStatusList());
