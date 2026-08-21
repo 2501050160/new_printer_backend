@@ -419,10 +419,16 @@ public PdfFile updateStatus(
 
     if ("COMPLETED".equals(status)) {
         pdf.setFinishedAt(LocalDateTime.now());
+        pdf.setPaymentStatus("PAID");
     }
 
     if ("PRINTING".equals(status) && pdf.getPrintingStartedAt() == null) {
         pdf.setPrintingStartedAt(LocalDateTime.now());
+        pdf.setPaymentStatus("PAID");
+    }
+
+    if ("QUEUE".equals(status)) {
+        pdf.setPaymentStatus("PAID");
     }
 
     PdfFile saved = repository.save(pdf);
