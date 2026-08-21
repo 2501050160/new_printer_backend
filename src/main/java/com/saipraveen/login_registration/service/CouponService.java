@@ -140,7 +140,13 @@ public class CouponService {
 
     @Transactional(readOnly = true)
     public List<Coupon> getAllCoupons() {
-        return repository.findAll();
+        try {
+            List<Coupon> list = repository.findAll();
+            return list != null ? list : new ArrayList<>();
+        } catch (Exception e) {
+            System.err.println("Notice: error fetching coupons from database: " + e.getMessage());
+            return new ArrayList<>();
+        }
     }
 
     @Transactional
