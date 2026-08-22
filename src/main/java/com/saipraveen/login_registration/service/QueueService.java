@@ -35,7 +35,7 @@ public class QueueService {
     @Value("${print.cancel-window-seconds:30}")
     private int cancelWindowSeconds;
 
-    @Value("${print.fulfillment-timeout-minutes:2}")
+    @Value("${print.fulfillment-timeout-minutes:30}")
     private int fulfillmentTimeoutMinutes;
 
     @Scheduled(fixedRate = 5000)
@@ -96,13 +96,13 @@ public class QueueService {
             );
         }
 
-        // 10-Minute PENDING_SCAN verification timeout (auto-refund if no OTP entered)
-        LocalDateTime scanCutoff = LocalDateTime.now().minusMinutes(10);
+        // 15-Minute PENDING_SCAN verification timeout (auto-refund if no OTP entered)
+        LocalDateTime scanCutoff = LocalDateTime.now().minusMinutes(15);
         List<PdfFile> scanTimedOut = repository.findExpiredPendingScanOrders(scanCutoff);
         for (PdfFile pdf : scanTimedOut) {
             refundAndCancel(
                     pdf,
-                    "QR/OTP Scan verification timeout (10 minutes)"
+                    "QR/OTP Scan verification timeout (15 minutes)"
             );
 
             System.out.println(
@@ -134,7 +134,31 @@ public class QueueService {
                         normalizeBlock(blockLocation)
                 );
 
+        if (queue.isEmpty() && blockLocation != null) {
+            queue = repository.findQueueByBlock(blockLocation.trim());
+        }
+
         if (queue.isEmpty()) {
+            // Check all queued orders and match fuzzily by block name
+            List<PdfFile> allQueued = repository.findAllQueuedOrders();
+            if (blockLocation != null) {
+                String cleanTarget = blockLocation.toLowerCase().replaceAll("[\\s-_]", "");
+                for (PdfFile p : allQueued) {
+                    if (p.getBlockLocation() != null) {
+                        String cleanOrderBlock = p.getBlockLocation().toLowerCase().replaceAll("[\\s-_]", "");
+                        if (cleanOrderBlock.equals(cleanTarget) || cleanOrderBlock.contains(cleanTarget) || cleanTarget.contains(cleanOrderBlock)) {
+                            return p;
+                        }
+                    }
+                }
+            }
+            if (!allQueued.isEmpty()) {
+                for (PdfFile p : allQueued) {
+                    if (p.getBlockLocation() == null || p.getBlockLocation().trim().isEmpty() || "Campus Kiosk".equalsIgnoreCase(p.getBlockLocation())) {
+                        return p;
+                    }
+                }
+            }
             return null;
         }
 
@@ -150,9 +174,9 @@ public class QueueService {
             throw new RuntimeException("Order not found");
         }
 
-        if (!"QUEUE".equals(pdf.getStatus())) {
+        if (!"QUEUE".equals(pdf.getStatus()) && !"PRINTING".equals(pdf.getStatus())) {
             throw new RuntimeException(
-                    "Order is not ready for printing"
+                    "Order is not ready for printing: " + pdf.getStatus()
             );
         }
 

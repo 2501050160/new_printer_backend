@@ -55,15 +55,23 @@ public class QueueController {
 
     @GetMapping("/next")
     public ResponseEntity<?> getNext(
-            @RequestHeader(value = "Authorization", required = false) String authHeader
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestParam(value = "blockLocation", required = false) String blockLocation
     ) {
         try {
             CampusBlock block = authenticateAgent(authHeader);
-            if (block == null) {
+            String targetBlock = (block != null) ? block.getName() : blockLocation;
+            if (targetBlock == null && blockLocation != null) {
+                targetBlock = blockLocation;
+            }
+            if (targetBlock == null) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid or missing API Key");
             }
             
-            PdfFile next = queueService.getNextForAgent(block.getName());
+            PdfFile next = queueService.getNextForAgent(targetBlock);
+            if (next == null && blockLocation != null && !blockLocation.equalsIgnoreCase(targetBlock)) {
+                next = queueService.getNextForAgent(blockLocation);
+            }
 
             if (next == null) {
                 return ResponseEntity.ok(null);
