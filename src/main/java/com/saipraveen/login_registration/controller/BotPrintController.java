@@ -171,7 +171,7 @@ public class BotPrintController {
                 botMsg.append("🏷️ *Discount Applied*: -₹").append(String.format("%.2f", updated.getDiscountAmount())).append("\n");
             }
             botMsg.append("💰 *Total Amount*: ₹").append(String.format("%.2f", estimatedTotal)).append("\n");
-            botMsg.append("🔐 *Your 4-Digit OTP*: *").append(otp).append("*\n");
+            botMsg.append("📺 *Release OTP*: Displayed on *").append(blockLocation).append(" TV Display Panel*\n");
             botMsg.append("📍 *Target Kiosk*: ").append(blockLocation).append("\n\n");
             botMsg.append("👉 *Complete Payment*: ").append(checkoutUrl);
 
