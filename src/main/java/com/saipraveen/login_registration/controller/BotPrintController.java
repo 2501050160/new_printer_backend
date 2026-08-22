@@ -153,8 +153,9 @@ public class BotPrintController {
             }
             double estimatedTotal = updated.getPrice() != null ? updated.getPrice() : (pages * rate * (copies != null ? copies : 1));
 
-            // Generate 4-digit OTP from order ID and attach to order
-            String otp = String.format("%04d", (updated.getId() != null ? updated.getId() : 1000) % 10000);
+            // Generate secure random 4-digit OTP (1000-9999)
+            int randomOtp = 1000 + new java.util.Random().nextInt(9000);
+            String otp = String.valueOf(randomOtp);
             pdfFileService.updateStatusAndOtp(updated.getId(), "ORDER_CREATED", otp);
 
             String realOrderId = updated.getOrderId() != null ? updated.getOrderId() : pdf.getOrderId();
