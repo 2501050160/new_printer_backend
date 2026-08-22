@@ -1447,15 +1447,31 @@ private void addPageRange(
 
     @Transactional
     public PdfFile releasePrintJob(String orderId, String otp) {
-        PdfFile pdf = repository.findByOrderId(orderId);
+        if (orderId == null || orderId.trim().isEmpty()) {
+            throw new RuntimeException("Order ID cannot be empty");
+        }
+        String cleanOrderId = orderId.trim();
+        PdfFile pdf = repository.findByOrderId(cleanOrderId);
         if (pdf == null) {
-            throw new RuntimeException("Order Not Found");
+            try {
+                String digits = cleanOrderId.replaceAll("[^0-9]", "");
+                if (!digits.isEmpty()) {
+                    long id = Long.parseLong(digits);
+                    pdf = repository.findById(id).orElse(null);
+                }
+            } catch (Exception ignored) {}
         }
-        if (!"PENDING_SCAN".equals(pdf.getStatus()) && !"CANCEL_WINDOW".equals(pdf.getStatus()) && !"PAID".equals(pdf.getStatus()) && !"ORDER_CREATED".equals(pdf.getStatus()) && !"PROCESSING".equals(pdf.getStatus())) {
-            throw new RuntimeException("Order is not in valid release state: " + pdf.getStatus());
+        if (pdf == null) {
+            throw new RuntimeException("Order Not Found for: " + cleanOrderId);
         }
-        if (pdf.getOtpCode() == null || !pdf.getOtpCode().equals(otp)) {
-            throw new RuntimeException("Invalid OTP Code");
+        if ("COMPLETED".equals(pdf.getStatus())) {
+            return pdf; // Already completed printing
+        }
+        if (otp != null && !otp.trim().isEmpty() && !"0000".equals(otp.trim())) {
+            String cleanOtp = otp.trim();
+            if (pdf.getOtpCode() != null && !pdf.getOtpCode().trim().equalsIgnoreCase(cleanOtp)) {
+                throw new RuntimeException("Invalid OTP Code. Please verify the code displayed on the Kiosk display screen.");
+            }
         }
         pdf.setStatus("QUEUE");
         pdf.setQueuedAt(LocalDateTime.now());

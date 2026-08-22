@@ -106,7 +106,13 @@ Long getCompletedOrders();
 Long getQueuedOrders();
 
 @Query(
-    "SELECT p FROM PdfFile p WHERE p.paymentStatus='PAID' AND p.status='QUEUE' AND p.blockLocation=:block ORDER BY p.id ASC"
+    "SELECT p FROM PdfFile p WHERE (p.paymentStatus IN ('PAID', 'SUCCESS', 'COMPLETED') OR p.razorpayPaymentId IS NOT NULL) " +
+    "AND p.status='QUEUE' " +
+    "AND (LOWER(TRIM(p.blockLocation)) = LOWER(TRIM(:block)) " +
+    "OR REPLACE(REPLACE(LOWER(TRIM(p.blockLocation)), ' ', ''), '-', '') = REPLACE(REPLACE(LOWER(TRIM(:block)), ' ', ''), '-', '') " +
+    "OR LOWER(TRIM(p.blockLocation)) LIKE CONCAT('%', LOWER(TRIM(:block)), '%') " +
+    "OR :block = 'ALL') " +
+    "ORDER BY p.id ASC"
 )
 List<PdfFile> findQueueByBlock(
         @Param("block") String blockLocation
@@ -120,7 +126,13 @@ List<PdfFile> findExpiredCancelWindows(
 );
 
 @Query(
-    "SELECT p FROM PdfFile p WHERE p.paymentStatus='PAID' AND p.status IN ('CANCEL_WINDOW','QUEUE','PRINTING') AND p.blockLocation=:block ORDER BY p.id ASC"
+    "SELECT p FROM PdfFile p WHERE (p.paymentStatus IN ('PAID', 'SUCCESS', 'COMPLETED') OR p.razorpayPaymentId IS NOT NULL) " +
+    "AND p.status IN ('CANCEL_WINDOW','QUEUE','PRINTING') " +
+    "AND (LOWER(TRIM(p.blockLocation)) = LOWER(TRIM(:block)) " +
+    "OR REPLACE(REPLACE(LOWER(TRIM(p.blockLocation)), ' ', ''), '-', '') = REPLACE(REPLACE(LOWER(TRIM(:block)), ' ', ''), '-', '') " +
+    "OR LOWER(TRIM(p.blockLocation)) LIKE CONCAT('%', LOWER(TRIM(:block)), '%') " +
+    "OR :block = 'ALL') " +
+    "ORDER BY p.id ASC"
 )
 List<PdfFile> findActiveQueueByBlock(
         @Param("block") String blockLocation
