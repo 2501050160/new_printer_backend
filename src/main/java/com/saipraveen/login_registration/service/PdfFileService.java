@@ -108,6 +108,13 @@ public PdfFile savePdf(
         String blockLocation)
         throws IOException {
 
+    if (userId != null) {
+        User u = userRepository.findById(userId).orElse(null);
+        if (u != null && Boolean.TRUE.equals(u.getBlocked())) {
+            throw new RuntimeException("Account is blocked by administrator.");
+        }
+    }
+
     PdfFile pdf = new PdfFile();
 
     // User Information
@@ -1323,6 +1330,12 @@ private void addPageRange(
             String customerName,
             String blockLocation
     ) throws IOException {
+        if (userId != null) {
+            User u = userRepository.findById(userId).orElse(null);
+            if (u != null && Boolean.TRUE.equals(u.getBlocked())) {
+                throw new RuntimeException("Account is blocked by administrator.");
+            }
+        }
         java.util.List<byte[]> pdfBytesList = new java.util.ArrayList<>();
         String combinedName = "";
         

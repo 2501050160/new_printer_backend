@@ -107,8 +107,12 @@ public class BotPrintController {
                 user.setWalletBalance(0.0);
                 user.setCollege(college);
                 user.setReferralCode("WA_" + cleanPhone);
+                user.setBlocked(false);
                 user = userRepository.save(user);
             } else {
+                if (Boolean.TRUE.equals(user.getBlocked())) {
+                    return ResponseEntity.badRequest().body("⛔ Account Suspended: Your WhatsApp number has been blocked by the administrator. Please contact campus admin to unblock your account.");
+                }
                 boolean changed = false;
                 if (!user.getName().contains("+91 " + cleanPhone)) {
                     user.setName(fullNameWithPhone);
@@ -199,10 +203,18 @@ public class BotPrintController {
         String cleanPhone = sanitizePhoneNumber(phoneNumber);
         String waEmail = "wa_" + cleanPhone + "@whatsapp.cloudprint";
         com.saipraveen.login_registration.entity.User user = userRepository.findByEmail(waEmail);
-        double balance = (user != null && user.getWalletBalance() != null) ? user.getWalletBalance() : 0.0;
         Map<String, Object> res = new HashMap<>();
+        if (user != null && Boolean.TRUE.equals(user.getBlocked())) {
+            res.put("phoneNumber", cleanPhone);
+            res.put("balance", 0.0);
+            res.put("blocked", true);
+            res.put("message", "⛔ Account Suspended: Your account is blocked by the administrator.");
+            return ResponseEntity.ok(res);
+        }
+        double balance = (user != null && user.getWalletBalance() != null) ? user.getWalletBalance() : 0.0;
         res.put("phoneNumber", cleanPhone);
         res.put("balance", balance);
+        res.put("blocked", false);
         return ResponseEntity.ok(res);
     }
 
@@ -222,7 +234,12 @@ public class BotPrintController {
             user.setPassword("WA_BOT_USER_NOPASS");
             user.setWalletBalance(0.0);
             user.setReferralCode("WA_" + cleanPhone);
+            user.setBlocked(false);
             user = userRepository.save(user);
+        } else if (Boolean.TRUE.equals(user.getBlocked())) {
+            res.put("success", false);
+            res.put("message", "⛔ Account Suspended: Your account has been blocked by the administrator.");
+            return ResponseEntity.ok(res);
         }
 
         if (couponCode == null || couponCode.trim().isEmpty()) {
@@ -334,6 +351,11 @@ public class BotPrintController {
         if (user == null) {
             res.put("success", false);
             res.put("message", "User account not found");
+            return ResponseEntity.ok(res);
+        }
+        if (Boolean.TRUE.equals(user.getBlocked())) {
+            res.put("success", false);
+            res.put("message", "⛔ Account Suspended: Your account has been blocked by the administrator.");
             return ResponseEntity.ok(res);
         }
 
