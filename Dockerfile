@@ -20,10 +20,6 @@ WORKDIR /app
 COPY --from=builder /app/target/login-registration-0.0.1-SNAPSHOT.jar app.jar
 COPY --from=builder /app/credentials ./credentials
 
-# Copy and set executable permissions on clean entrypoint wrapper
-COPY entrypoint.sh ./entrypoint.sh
-RUN chmod +x ./entrypoint.sh
-
 EXPOSE 8080
 
-ENTRYPOINT ["/bin/sh", "/app/entrypoint.sh"]
+ENTRYPOINT ["java", "-Xmx192m", "-Xms64m", "-Xss256k", "-XX:MaxMetaspaceSize=96m", "-XX:CompressedClassSpaceSize=32m", "-XX:ReservedCodeCacheSize=32m", "-XX:+UseSerialGC", "-XX:TieredStopAtLevel=1", "-XX:CICompilerCount=2", "-Dspring.main.lazy-initialization=true", "-Djava.security.egd=file:/dev/./urandom", "-jar", "app.jar"]
