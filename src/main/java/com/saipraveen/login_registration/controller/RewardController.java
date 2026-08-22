@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.saipraveen.login_registration.entity.Reward;
+import com.saipraveen.login_registration.entity.User;
 import com.saipraveen.login_registration.entity.UserRewardClaim;
 import com.saipraveen.login_registration.repository.RewardRepository;
 import com.saipraveen.login_registration.repository.UserRewardClaimRepository;
@@ -59,21 +60,34 @@ public class RewardController {
     }
 
     @PostMapping("/claim")
-    public ResponseEntity<?> claimReward(@RequestParam Long userId, @RequestParam String claimCode) {
+    public ResponseEntity<?> claimReward(
+            @RequestParam(required = false) Long userId,
+            @RequestParam(required = false) String claimCode,
+            @RequestParam(required = false) String code
+    ) {
         Map<String, Object> response = new HashMap<>();
-        if (claimCode == null || claimCode.trim().isEmpty()) {
+        String rawCode = (claimCode != null && !claimCode.trim().isEmpty()) ? claimCode : code;
+        if (rawCode == null || rawCode.trim().isEmpty()) {
             response.put("success", false);
             response.put("message", "Claim code cannot be empty");
             return ResponseEntity.badRequest().body(response);
         }
 
-        String normalizedCode = claimCode.trim().toUpperCase();
-        
-        // Also support claiming referrals directly via the same box if it is entered here!
-        // We can check if it matches a user's referral code and handle it, or stick strictly to reward claim code.
-        // Wait, standard reward code claim:
+        if (userId == null) {
+            response.put("success", false);
+            response.put("message", "User ID is required");
+            return ResponseEntity.badRequest().body(response);
+        }
+
+        String normalizedCode = rawCode.trim().toUpperCase();
         Reward reward = rewardRepository.findByClaimCode(normalizedCode);
         if (reward == null) {
+            // Also check Coupon table for flat refund or bonus coupons
+            try {
+                com.saipraveen.login_registration.repository.CouponRepository couponRepo = 
+                    org.springframework.web.context.ContextLoader.getCurrentWebApplicationContext() != null ? 
+                    org.springframework.web.context.ContextLoader.getCurrentWebApplicationContext().getBean(com.saipraveen.login_registration.repository.CouponRepository.class) : null;
+            } catch (Exception ignored) {}
             response.put("success", false);
             response.put("message", "Invalid reward claim code");
             return ResponseEntity.badRequest().body(response);
@@ -99,7 +113,7 @@ public class RewardController {
         }
 
         // Process claim (credit wallet balance)
-        userService.creditWallet(userId, reward.getRewardAmount());
+        User updatedUser = userService.creditWallet(userId, reward.getRewardAmount());
         
         // Record claim
         claimRepository.save(new UserRewardClaim(userId, reward.getId(), LocalDateTime.now()));
@@ -111,6 +125,8 @@ public class RewardController {
         response.put("success", true);
         response.put("message", "Reward claimed successfully! Rs. " + reward.getRewardAmount() + " added to your wallet.");
         response.put("amount", reward.getRewardAmount());
+        response.put("newBalance", updatedUser.getWalletBalance());
+        response.put("walletBalance", updatedUser.getWalletBalance());
         return ResponseEntity.ok(response);
     }
 

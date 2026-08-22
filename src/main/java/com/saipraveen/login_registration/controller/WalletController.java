@@ -25,31 +25,62 @@ public class WalletController {
 
     @GetMapping("/balance")
     public ResponseEntity<?> getBalance(
-            @RequestParam Long userId
+            @RequestParam(required = false) Long userId,
+            @RequestParam(required = false) String email,
+            @RequestParam(required = false) String phoneNumber
     ) {
         try {
-            Double balance = userService.getWalletBalance(userId);
-            return ResponseEntity.ok(balance != null ? balance : 0.0);
+            User user = null;
+            if (userId != null) {
+                user = userService.getUserById(userId);
+            } else if (email != null && !email.trim().isEmpty()) {
+                user = userService.findByEmail(email.trim());
+            } else if (phoneNumber != null && !phoneNumber.trim().isEmpty()) {
+                String cleanPhone = phoneNumber.replaceAll("[^0-9]", "");
+                if (cleanPhone.length() > 10) cleanPhone = cleanPhone.substring(cleanPhone.length() - 10);
+                user = userService.findByEmail("wa_" + cleanPhone + "@whatsapp.cloudprint");
+            }
+            if (user != null) {
+                Double balance = user.getWalletBalance();
+                return ResponseEntity.ok(balance != null ? balance : 0.0);
+            }
+            return ResponseEntity.ok(0.0);
         } catch (Exception e) {
-            System.err.println("Notice: user wallet balance lookup for userId " + userId + ": " + e.getMessage());
+            System.err.println("Notice: user wallet balance lookup: " + e.getMessage());
             return ResponseEntity.ok(0.0);
         }
     }
 
     @PostMapping("/add")
     public ResponseEntity<?> addBalance(
-            @RequestParam Long userId,
+            @RequestParam(required = false) Long userId,
+            @RequestParam(required = false) String email,
+            @RequestParam(required = false) String phoneNumber,
             @RequestParam Double amount,
             @RequestParam(required = false) String paymentId
     ) {
         try {
-            if (userId == null || amount == null || amount <= 0) {
-                return ResponseEntity.badRequest().body("Invalid user or amount");
+            if (amount == null || amount <= 0) {
+                return ResponseEntity.badRequest().body("Invalid amount");
             }
-            User user = userService.creditWallet(userId, amount);
+            User user = null;
+            if (userId != null) {
+                user = userService.getUserById(userId);
+            } else if (email != null && !email.trim().isEmpty()) {
+                user = userService.findByEmail(email.trim());
+            } else if (phoneNumber != null && !phoneNumber.trim().isEmpty()) {
+                String cleanPhone = phoneNumber.replaceAll("[^0-9]", "");
+                if (cleanPhone.length() > 10) cleanPhone = cleanPhone.substring(cleanPhone.length() - 10);
+                user = userService.findByEmail("wa_" + cleanPhone + "@whatsapp.cloudprint");
+            }
+            if (user == null) {
+                return ResponseEntity.badRequest().body("User not found");
+            }
+            User updated = userService.creditWallet(user.getId(), amount);
             Map<String, Object> res = new HashMap<>();
             res.put("success", true);
-            res.put("walletBalance", user.getWalletBalance());
+            res.put("userId", updated.getId());
+            res.put("walletBalance", updated.getWalletBalance());
             res.put("message", "Wallet credited successfully with ₹" + amount);
             return ResponseEntity.ok(res);
         } catch (Exception e) {

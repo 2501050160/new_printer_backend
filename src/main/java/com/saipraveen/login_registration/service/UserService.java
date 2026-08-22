@@ -173,6 +173,11 @@ public class UserService {
         repository.save(user);
     }
 
+    public User findByEmail(String email) {
+        if (email == null) return null;
+        return repository.findByEmail(email.trim());
+    }
+
     public User getUserById(Long userId) {
 
         return repository.findById(userId)
@@ -200,7 +205,7 @@ public class UserService {
 
         user.setWalletBalance(current + amount);
 
-        return repository.save(user);
+        return repository.saveAndFlush(user);
     }
 
     @Transactional
