@@ -435,7 +435,16 @@ public class QueueService {
         pdf.setFinishedAt(LocalDateTime.now());
         pdf.setPdfData(null);
 
-        repository.save(pdf);
+        PdfFile saved = repository.save(pdf);
+
+        try {
+            if (sseService != null) {
+                sseService.broadcastOrderEvent(saved.getOrderId(), "CANCELLED");
+                sseService.broadcastQueueEvent("Order expired/cancelled: " + saved.getOrderId());
+            }
+        } catch (Exception e) {
+            System.err.println("SSE broadcast error on refund/cancel for " + saved.getOrderId() + ": " + e.getMessage());
+        }
     }
 
     public int getCancelWindowSeconds() {

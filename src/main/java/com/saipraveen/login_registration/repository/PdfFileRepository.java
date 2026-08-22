@@ -139,7 +139,11 @@ List<PdfFile> findActiveQueueByBlock(
 );
 
 @Query(
-    "SELECT p FROM PdfFile p WHERE p.status = 'PENDING_SCAN' AND p.cancelWindowEndsAt <= :cutoff"
+    "SELECT p FROM PdfFile p WHERE p.status = 'PENDING_SCAN' AND (" +
+    "(p.cancelWindowEndsAt IS NOT NULL AND p.cancelWindowEndsAt <= :cutoff) OR " +
+    "(p.paidAt IS NOT NULL AND p.paidAt <= :cutoff) OR " +
+    "(p.uploadTime IS NOT NULL AND p.uploadTime <= :cutoff)" +
+    ")"
 )
 List<PdfFile> findExpiredPendingScanOrders(
         @Param("cutoff") LocalDateTime cutoff
