@@ -153,11 +153,37 @@ public class BotPrintController {
             }
             double estimatedTotal = updated.getPrice() != null ? updated.getPrice() : (pages * rate * (copies != null ? copies : 1));
 
-            // Generate secure random 4-digit OTP (1000-9999)
-            int randomOtp = 1000 + new java.util.Random().nextInt(9000);
-            String otp = String.valueOf(randomOtp);
-            pdfFileService.updateStatusAndOtp(updated.getId(), "ORDER_CREATED", otp);
+            // Handle automatic full or partial wallet deduction
+            double userBal = user.getWalletBalance() != null ? user.getWalletBalance() : 0.0;
+            boolean paidViaWallet = false;
+            boolean partialWallet = false;
+            double walletDeducted = 0.0;
+            double finalPriceToPay = estimatedTotal;
 
+            if (userBal >= estimatedTotal && estimatedTotal > 0) {
+                // Full wallet payment
+                user.setWalletBalance(userBal - estimatedTotal);
+                userRepository.save(user);
+                pdfFileService.markAsPaid(updated.getOrderId(), "WALLET_PAYMENT");
+                paidViaWallet = true;
+                finalPriceToPay = 0.0;
+                walletDeducted = estimatedTotal;
+            } else if (userBal > 0 && userBal < estimatedTotal) {
+                // Partial wallet payment
+                walletDeducted = userBal;
+                user.setWalletBalance(0.0);
+                userRepository.save(user);
+                
+                finalPriceToPay = estimatedTotal - walletDeducted;
+                updated.setOriginalPrice(estimatedTotal);
+                updated.setDiscountAmount(walletDeducted);
+                updated.setPrice(finalPriceToPay);
+                updated = pdfFileRepository.save(updated);
+                partialWallet = true;
+            }
+
+            PdfFile latestPdf = pdfFileRepository.findByOrderId(updated.getOrderId());
+            String realOtp = (latestPdf != null && latestPdf.getOtpCode() != null) ? latestPdf.getOtpCode() : (updated.getOtpCode() != null ? updated.getOtpCode() : "");
             String realOrderId = updated.getOrderId() != null ? updated.getOrderId() : pdf.getOrderId();
             String checkoutUrl = frontendUrl + "/pay?orderId=" + realOrderId;
 
@@ -168,22 +194,34 @@ public class BotPrintController {
             botMsg.append("🏫 *Campus*: ").append(college).append(" (").append(blockLocation).append(")\n");
             botMsg.append("📊 *Pages*: ").append(pages).append(" | *Print Type*: ").append(printType).append("\n");
             if (updated.getDiscountAmount() != null && updated.getDiscountAmount() > 0) {
-                botMsg.append("🏷️ *Discount Applied*: -₹").append(String.format("%.2f", updated.getDiscountAmount())).append("\n");
+                botMsg.append("🏷️ *Discount / Wallet Applied*: -₹").append(String.format("%.2f", updated.getDiscountAmount())).append("\n");
             }
             botMsg.append("💰 *Total Amount*: ₹").append(String.format("%.2f", estimatedTotal)).append("\n");
+            if (paidViaWallet) {
+                botMsg.append("✅ *Payment*: Paid in Full via Wallet Balance\n");
+            } else if (partialWallet) {
+                botMsg.append("💳 *Remaining to Pay*: ₹").append(String.format("%.2f", finalPriceToPay)).append("\n");
+            }
             botMsg.append("📺 *Release OTP*: Displayed on *").append(blockLocation).append(" TV Display Panel*\n");
             botMsg.append("📍 *Target Kiosk*: ").append(blockLocation).append("\n\n");
-            botMsg.append("👉 *Complete Payment*: ").append(checkoutUrl);
+            if (!paidViaWallet) {
+                botMsg.append("👉 *Complete Payment*: ").append(checkoutUrl);
+            }
 
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("orderId", realOrderId);
-            response.put("otp", otp);
+            response.put("otp", realOtp);
             response.put("totalPages", pages);
             response.put("college", college);
             response.put("ratePerPage", rate);
             response.put("discountAmount", updated.getDiscountAmount() != null ? updated.getDiscountAmount() : 0.0);
             response.put("estimatedTotal", estimatedTotal);
+            response.put("finalPriceToPay", finalPriceToPay);
+            response.put("paidViaWallet", paidViaWallet);
+            response.put("partialWallet", partialWallet);
+            response.put("walletDeducted", walletDeducted);
+            response.put("newBalance", user.getWalletBalance());
             response.put("blockLocation", blockLocation);
             response.put("paymentUrl", checkoutUrl);
             response.put("botMessage", botMsg.toString());
