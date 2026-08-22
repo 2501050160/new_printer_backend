@@ -286,6 +286,15 @@ public ResponseEntity<?> cancelOrder(
     );
 }
 
+@PostMapping("/flushOrder")
+public ResponseEntity<?> flushOrder(
+        @RequestParam String orderId
+) {
+    return ResponseEntity.ok(
+            queueService.flushOrder(orderId)
+    );
+}
+
 @GetMapping("/cancelWindow")
 public ResponseEntity<?> cancelWindow(
 

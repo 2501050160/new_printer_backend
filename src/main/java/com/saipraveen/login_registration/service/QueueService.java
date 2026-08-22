@@ -320,6 +320,58 @@ public class QueueService {
         return result;
     }
 
+    @Transactional
+    public Map<String, Object> flushOrder(String orderId) {
+        Map<String, Object> result = new HashMap<>();
+        if (orderId == null || orderId.trim().isEmpty()) {
+            result.put("success", false);
+            result.put("message", "Order ID cannot be empty");
+            return result;
+        }
+
+        PdfFile pdf = repository.findByOrderId(orderId.trim());
+        if (pdf == null) {
+            try {
+                String digits = orderId.replaceAll("[^0-9]", "");
+                if (!digits.isEmpty()) {
+                    long id = Long.parseLong(digits);
+                    pdf = repository.findById(id).orElse(null);
+                }
+            } catch (Exception ignored) {}
+        }
+
+        if (pdf == null) {
+            result.put("success", false);
+            result.put("message", "Order not found: " + orderId);
+            return result;
+        }
+
+        Double refundAmount = (pdf.getPrice() != null) ? pdf.getPrice() : 0.0;
+        if (pdf.getUserId() != null && refundAmount > 0 && !"REFUNDED".equals(pdf.getPaymentStatus())) {
+            try {
+                userService.creditWallet(pdf.getUserId(), refundAmount);
+            } catch (Exception e) {
+                System.err.println("Failed to refund during flush: " + e.getMessage());
+            }
+        }
+
+        pdf.setStatus("CANCELLED");
+        pdf.setPaymentStatus("REFUNDED");
+        pdf.setFinishedAt(LocalDateTime.now());
+        pdf.setPdfData(null);
+        repository.save(pdf);
+
+        if (sseService != null) {
+            sseService.broadcastOrderEvent(pdf.getOrderId(), "CANCELLED");
+            sseService.broadcastQueueEvent("Order flushed and removed from queue: " + pdf.getOrderId());
+        }
+
+        result.put("success", true);
+        result.put("message", "Order " + orderId + " successfully flushed, cancelled, and refunded.");
+        result.put("refundAmount", refundAmount);
+        return result;
+    }
+
     public void beginCancelWindow(PdfFile pdf) {
 
         LocalDateTime now = LocalDateTime.now();
