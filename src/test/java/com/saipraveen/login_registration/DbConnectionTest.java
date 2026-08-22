@@ -3,7 +3,6 @@ package com.saipraveen.login_registration;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
 import java.sql.Statement;
 
 import org.junit.jupiter.api.Test;
@@ -17,65 +16,58 @@ public class DbConnectionTest {
         String pass = "npg_jShnM6rUD0lA";
 
         try (Connection conn = DriverManager.getConnection(url, user, pass)) {
-            System.out.println("✅ Connected to Neon PostgreSQL!");
+            System.out.println("Connected!");
 
-            // 1. Show ALL columns in coupons table
+            // 1. Drop the coupons table entirely
             try (Statement stmt = conn.createStatement()) {
-                ResultSet rs = stmt.executeQuery("SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_name = 'coupons' ORDER BY ordinal_position");
-                System.out.println("\n=== COUPONS TABLE SCHEMA ===");
+                stmt.execute("DROP TABLE IF EXISTS coupons CASCADE");
+                System.out.println("DROPPED coupons table");
+            }
+
+            // 2. Recreate it fresh with exact columns matching the entity
+            try (Statement stmt = conn.createStatement()) {
+                stmt.execute(
+                    "CREATE TABLE coupons (" +
+                    "  id BIGSERIAL PRIMARY KEY," +
+                    "  coupon_code VARCHAR(255)," +
+                    "  discount_percentage DOUBLE PRECISION DEFAULT 0," +
+                    "  discount_amount DOUBLE PRECISION DEFAULT 0," +
+                    "  min_order_amount DOUBLE PRECISION DEFAULT 0," +
+                    "  expiry_date VARCHAR(255)," +
+                    "  max_uses INTEGER DEFAULT 100," +
+                    "  used_count INTEGER DEFAULT 0," +
+                    "  active BOOLEAN DEFAULT true" +
+                    ")"
+                );
+                System.out.println("CREATED fresh coupons table");
+            }
+
+            // 3. Insert a test coupon
+            try (Statement stmt = conn.createStatement()) {
+                stmt.execute(
+                    "INSERT INTO coupons (coupon_code, discount_percentage, discount_amount, min_order_amount, expiry_date, max_uses, used_count, active) " +
+                    "VALUES ('TEST50', 50, 0, 0, '2026-12-31', 100, 0, true)"
+                );
+                System.out.println("INSERTED test coupon TEST50");
+            }
+
+            // 4. Verify
+            try (Statement stmt = conn.createStatement()) {
+                ResultSet rs = stmt.executeQuery("SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'coupons' ORDER BY ordinal_position");
+                System.out.println("\n=== NEW COUPONS TABLE SCHEMA ===");
                 while (rs.next()) {
-                    System.out.println("  " + rs.getString("column_name") + " | " + rs.getString("data_type") + " | nullable=" + rs.getString("is_nullable"));
+                    System.out.println("  " + rs.getString("column_name") + " | " + rs.getString("data_type"));
                 }
             }
 
-            // 2. Show ALL columns in rewards table (this one WORKS on Render)
             try (Statement stmt = conn.createStatement()) {
-                ResultSet rs = stmt.executeQuery("SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_name = 'rewards' ORDER BY ordinal_position");
-                System.out.println("\n=== REWARDS TABLE SCHEMA (WORKING) ===");
+                ResultSet rs = stmt.executeQuery("SELECT * FROM coupons");
                 while (rs.next()) {
-                    System.out.println("  " + rs.getString("column_name") + " | " + rs.getString("data_type") + " | nullable=" + rs.getString("is_nullable"));
+                    System.out.println("Row: id=" + rs.getLong("id") + " code=" + rs.getString("coupon_code") + " pct=" + rs.getDouble("discount_percentage") + " active=" + rs.getBoolean("active"));
                 }
-            }
-
-            // 3. Try SELECT * FROM coupons to see actual data
-            try (Statement stmt = conn.createStatement()) {
-                ResultSet rs = stmt.executeQuery("SELECT * FROM coupons LIMIT 5");
-                ResultSetMetaData md = rs.getMetaData();
-                System.out.println("\n=== COUPONS DATA (up to 5 rows) ===");
-                int colCount = md.getColumnCount();
-                StringBuilder header = new StringBuilder();
-                for (int i = 1; i <= colCount; i++) {
-                    header.append(md.getColumnName(i)).append(" (").append(md.getColumnTypeName(i)).append(")");
-                    if (i < colCount) header.append(" | ");
-                }
-                System.out.println(header);
-                int rowNum = 0;
-                while (rs.next()) {
-                    rowNum++;
-                    StringBuilder row = new StringBuilder("Row " + rowNum + ": ");
-                    for (int i = 1; i <= colCount; i++) {
-                        row.append(md.getColumnName(i)).append("=").append(rs.getString(i));
-                        if (i < colCount) row.append(", ");
-                    }
-                    System.out.println(row);
-                }
-                if (rowNum == 0) System.out.println("  (no rows)");
-            }
-
-            // 4. Try the exact query that JPA findAll() would do
-            try (Statement stmt = conn.createStatement()) {
-                ResultSet rs = stmt.executeQuery("SELECT c.id, c.coupon_code, c.discount_percentage, c.discount_amount, c.min_order_amount, c.expiry_date, c.max_uses, c.used_count, c.active FROM coupons c");
-                System.out.println("\n=== JPA-EQUIVALENT QUERY RESULT ===");
-                int count = 0;
-                while (rs.next()) {
-                    count++;
-                    System.out.println("  id=" + rs.getString("id") + " code=" + rs.getString("coupon_code") + " pct=" + rs.getString("discount_percentage") + " amt=" + rs.getString("discount_amount") + " expiry=" + rs.getString("expiry_date") + " active=" + rs.getString("active"));
-                }
-                System.out.println("  Total coupons found: " + count);
             }
 
         } catch (Exception e) {
-            System.err.println("ERROR: " + e.getMessage());
             e.printStackTrace();
         }
     }
