@@ -41,7 +41,8 @@ public class RazorpayService {
 
     public Map<String, Object> createOrder(
             Double amount,
-            String appOrderId
+            String appOrderId,
+            String userId
     ) throws Exception {
 
         String currentKeyId = defaultKeyId;
@@ -123,6 +124,10 @@ public class RazorpayService {
 
         JSONObject notes = new JSONObject();
         notes.put("app_order_id", appOrderId);
+        // Store userId so the webhook handler can credit the wallet server-side
+        if (userId != null && !userId.isBlank()) {
+            notes.put("user_id", userId);
+        }
         options.put("notes", notes);
         try {
 

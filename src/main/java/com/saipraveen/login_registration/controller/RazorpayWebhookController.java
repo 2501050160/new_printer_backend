@@ -24,6 +24,7 @@ import com.saipraveen.login_registration.repository.PdfFileRepository;
 import com.saipraveen.login_registration.repository.CampusBlockRepository;
 import com.saipraveen.login_registration.repository.CollegeConfigRepository;
 import com.saipraveen.login_registration.service.PdfFileService;
+import com.saipraveen.login_registration.service.UserService;
 
 @RestController
 @RequestMapping("/api/webhook")
@@ -41,6 +42,9 @@ public class RazorpayWebhookController {
 
     @Autowired
     private CollegeConfigRepository collegeConfigRepository;
+
+    @Autowired
+    private UserService userService;
 
     @Autowired
     private com.saipraveen.login_registration.service.SseService sseService;
@@ -103,7 +107,35 @@ public class RazorpayWebhookController {
             
             String status = payment.getString("status"); // e.g., "captured", "failed"
 
-            // Update our system using order ID
+            // ---- Wallet top-up: credit the user's wallet balance ----
+            if (orderId.startsWith("WALLET_")) {
+                if ("captured".equals(status)) {
+                    // Resolve userId from Razorpay order notes
+                    String userIdStr = null;
+                    if (payment.has("notes") && !payment.isNull("notes")) {
+                        JSONObject notes = payment.getJSONObject("notes");
+                        if (notes.has("user_id")) {
+                            userIdStr = notes.getString("user_id");
+                        }
+                    }
+                    if (userIdStr != null && !userIdStr.isBlank()) {
+                        try {
+                            long uid = Long.parseLong(userIdStr.trim());
+                            double amountRupees = payment.getDouble("amount") / 100.0;
+                            String paymentId = payment.getString("id");
+                            userService.creditWallet(uid, amountRupees);
+                            System.out.println("[Webhook] Wallet credited: userId=" + uid + ", amount=" + amountRupees + ", paymentId=" + paymentId);
+                        } catch (Exception walletErr) {
+                            System.err.println("[Webhook] Failed to credit wallet: " + walletErr.getMessage());
+                        }
+                    } else {
+                        System.err.println("[Webhook] WALLET_ order missing user_id in notes: " + orderId);
+                    }
+                }
+                return new ResponseEntity<>("Wallet webhook processed", HttpStatus.OK);
+            }
+
+            // ---- PDF print order payment handling ----
             if ("captured".equals(status)) {
                 String paymentId = payment.getString("id");
                 pdfService.markAsPaid(orderId, paymentId);

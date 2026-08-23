@@ -21,10 +21,9 @@ public class PaymentController {
 
     @PostMapping(value = "/createOrder", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> createOrder(
-
             @RequestParam Double amount,
-            @RequestParam String appOrderId
-
+            @RequestParam String appOrderId,
+            @RequestParam(required = false) String userId
     ) throws Exception {
 
         return ResponseEntity.ok()
@@ -32,7 +31,8 @@ public class PaymentController {
                 .body(
                 service.createOrder(
                         amount,
-                        appOrderId
+                        appOrderId,
+                        userId
                 )
         );
     }
