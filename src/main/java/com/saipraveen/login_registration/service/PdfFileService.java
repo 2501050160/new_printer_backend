@@ -261,7 +261,7 @@ public PdfFile updateOrder(
         String printType,
         String blockLocation,
         String nupLayout) {
-    return updateOrder(orderId, copies, selectedPages, printType, blockLocation, nupLayout, false);
+    return updateOrder(orderId, copies, selectedPages, printType, blockLocation, nupLayout, false, "portrait");
 }
 
 public PdfFile updateOrder(
@@ -272,6 +272,18 @@ public PdfFile updateOrder(
         String blockLocation,
         String nupLayout,
         Boolean doubleSided) {
+    return updateOrder(orderId, copies, selectedPages, printType, blockLocation, nupLayout, doubleSided, "portrait");
+}
+
+public PdfFile updateOrder(
+        String orderId,
+        Integer copies,
+        String selectedPages,
+        String printType,
+        String blockLocation,
+        String nupLayout,
+        Boolean doubleSided,
+        String orientation) {
 
     PdfFile pdf =
             repository.findByOrderId(orderId);
@@ -300,6 +312,9 @@ public PdfFile updateOrder(
     );
     pdf.setNupLayout(nupLayout);
     pdf.setDoubleSided(doubleSided);
+    if (orientation != null && !orientation.trim().isEmpty()) {
+        pdf.setOrientation(orientation);
+    }
 
     try {
         com.saipraveen.login_registration.entity.PrinterConfig assigned = printerConfigService.getPrinterByBlockAndType(pdf.getBlockLocation(), pdf.getPrintType());

@@ -363,4 +363,14 @@ public void setTotalPages(Integer totalPages) {
     public void setOrderChannel(String orderChannel) {
         this.orderChannel = orderChannel;
     }
+
+    private String orientation = "portrait";
+
+    public String getOrientation() {
+        return orientation != null ? orientation : "portrait";
+    }
+
+    public void setOrientation(String orientation) {
+        this.orientation = orientation != null ? orientation.toLowerCase().trim() : "portrait";
+    }
 }

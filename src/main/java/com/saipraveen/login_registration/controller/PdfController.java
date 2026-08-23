@@ -39,7 +39,8 @@ public ResponseEntity<?> updateOrder(
         @RequestParam String printType,
         @RequestParam(required = false) String blockLocation,
         @RequestParam(required = false, defaultValue = "1-up") String nupLayout,
-        @RequestParam(required = false, defaultValue = "false") Boolean doubleSided
+        @RequestParam(required = false, defaultValue = "false") Boolean doubleSided,
+        @RequestParam(required = false, defaultValue = "portrait") String orientation
 ) {
     return ResponseEntity.ok(
             service.updateOrder(
@@ -49,7 +50,8 @@ public ResponseEntity<?> updateOrder(
                     printType,
                     blockLocation,
                     nupLayout,
-                    doubleSided
+                    doubleSided,
+                    orientation
             )
     );
 }
