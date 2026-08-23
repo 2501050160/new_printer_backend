@@ -509,22 +509,31 @@ public Map<String,Object> getDashboardStats(String period) {
     Double grossRevenue;
     Double totalDiscounts;
     Double netRevenue;
+    Double cashRevenue;
+    Double voucherVolume;
 
     if (start == null) {
         grossRevenue = repository.getGrossRevenueAll();
         totalDiscounts = repository.getTotalDiscountsAll();
         netRevenue = repository.getNetRevenueAll();
+        cashRevenue = repository.getCashRevenueAll();
+        voucherVolume = repository.getVoucherVolumeAll();
     } else {
         grossRevenue = repository.getGrossRevenueSince(start);
         totalDiscounts = repository.getTotalDiscountsSince(start);
         netRevenue = repository.getNetRevenueSince(start);
+        cashRevenue = repository.getCashRevenueSince(start);
+        voucherVolume = repository.getVoucherVolumeSince(start);
     }
 
     stats.put("period", period);
     stats.put("grossRevenue", grossRevenue == null ? 0.0 : grossRevenue);
     stats.put("totalDiscounts", totalDiscounts == null ? 0.0 : totalDiscounts);
-    stats.put("netRevenue", netRevenue == null ? 0.0 : netRevenue);
-    stats.put("totalRevenue", netRevenue == null ? 0.0 : netRevenue);
+    stats.put("cashRevenue", cashRevenue == null ? 0.0 : cashRevenue);
+    stats.put("realCashRevenue", cashRevenue == null ? 0.0 : cashRevenue);
+    stats.put("voucherVolume", voucherVolume == null ? 0.0 : voucherVolume);
+    stats.put("netRevenue", cashRevenue == null ? 0.0 : cashRevenue);
+    stats.put("totalRevenue", cashRevenue == null ? 0.0 : cashRevenue);
 
     stats.put(
             "todayRevenue",

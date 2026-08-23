@@ -131,29 +131,31 @@ public class CouponController {
         return ResponseEntity.notFound().build();
     }
 
-    @Scheduled(cron = "0 0 0 * * *")
+    @Scheduled(fixedRate = 60000, initialDelay = 15000)
     @Transactional
     public void autoDeleteExpiredCoupons() {
         List<Coupon> allCoupons = couponRepository.findAll();
-        LocalDate yesterday = LocalDate.now().minusDays(1);
+        LocalDate today = LocalDate.now();
         List<Coupon> toDelete = new ArrayList<>();
         for (Coupon coupon : allCoupons) {
             boolean expired = false;
             if (coupon.getExpiryDate() != null && !coupon.getExpiryDate().trim().isEmpty()) {
                 try {
                     LocalDate date = LocalDate.parse(coupon.getExpiryDate().trim());
-                    if (date.isBefore(yesterday)) expired = true;
+                    if (date.isBefore(today)) expired = true;
                 } catch (Exception ignored) {}
             }
             boolean fullyUsed = coupon.getUsedCount() != null && coupon.getMaxUses() != null
                     && coupon.getMaxUses() > 0 && coupon.getUsedCount() >= coupon.getMaxUses();
-            if (expired || fullyUsed) {
+            boolean inactive = Boolean.FALSE.equals(coupon.getActive());
+
+            if (expired || fullyUsed || inactive) {
                 toDelete.add(coupon);
             }
         }
         if (!toDelete.isEmpty()) {
             couponRepository.deleteAll(toDelete);
-            System.out.println("Auto-deleted " + toDelete.size() + " expired/used coupons");
+            System.out.println("Auto-deleted " + toDelete.size() + " expired/used/inactive coupons to keep DB clean.");
         }
     }
 }

@@ -48,6 +48,9 @@ public class BotPrintController {
     @Autowired
     private com.saipraveen.login_registration.service.QueueService queueService;
 
+    @Autowired
+    private com.saipraveen.login_registration.service.VoucherService voucherService;
+
     @org.springframework.beans.factory.annotation.Value("${app.frontend.url:https://cloudprint.website}")
     private String frontendUrl;
 
@@ -313,95 +316,8 @@ public class BotPrintController {
             return ResponseEntity.ok(res);
         }
 
-        String cleanCode = couponCode.trim().toUpperCase();
-        java.util.List<com.saipraveen.login_registration.entity.Coupon> coupons = couponRepository.findByCouponCodeIgnoreCase(cleanCode);
-        com.saipraveen.login_registration.entity.Coupon coupon = (coupons != null && !coupons.isEmpty()) ? coupons.get(0) : null;
-        if (coupon == null) {
-            // Auto-heal fallback for 6-digit refund codes (e.g. 880996)
-            if (cleanCode.matches("\\d{6}")) {
-                coupon = new com.saipraveen.login_registration.entity.Coupon();
-                coupon.setCouponCode(cleanCode);
-                double detectedAmount = 2.0;
-                try {
-                    java.util.List<com.saipraveen.login_registration.entity.PdfFile> recentOrders = pdfFileRepository.findByUserId(user.getId());
-                    if (recentOrders != null && !recentOrders.isEmpty()) {
-                        for (com.saipraveen.login_registration.entity.PdfFile p : recentOrders) {
-                            if ("CANCELLED".equalsIgnoreCase(p.getStatus()) || "EXPIRED".equalsIgnoreCase(p.getStatus()) || "PAID".equalsIgnoreCase(p.getPaymentStatus())) {
-                                if (p.getPrice() != null && p.getPrice() > 0) {
-                                    detectedAmount = p.getPrice();
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                } catch (Exception ignored) {}
-                coupon.setDiscountAmount(detectedAmount);
-                coupon.setDiscountPercentage(0.0);
-                coupon.setMaxUses(1);
-                coupon.setUsedCount(0);
-                coupon.setExpiryDate(java.time.LocalDate.now().plusDays(7).toString());
-                coupon.setActive(true);
-                coupon = couponRepository.save(coupon);
-            }
-        }
-
-        if (coupon == null || Boolean.FALSE.equals(coupon.getActive())) {
-            res.put("success", false);
-            res.put("message", "Invalid or inactive coupon code.");
-            return ResponseEntity.ok(res);
-        }
-
-        boolean isExpired = false;
-        if (coupon.getExpiryDate() != null && !coupon.getExpiryDate().trim().isEmpty()) {
-            try {
-                java.time.LocalDate date = java.time.LocalDate.parse(coupon.getExpiryDate().trim());
-                if (date.isBefore(java.time.LocalDate.now())) {
-                    isExpired = true;
-                }
-            } catch (Exception ignored) {}
-        }
-
-        if (isExpired) {
-            coupon.setActive(false);
-            couponRepository.save(coupon);
-            res.put("success", false);
-            res.put("message", "Coupon code has expired.");
-            return ResponseEntity.ok(res);
-        }
-
-        if (coupon.getMaxUses() != null && coupon.getUsedCount() != null && coupon.getUsedCount() >= coupon.getMaxUses()) {
-            coupon.setActive(false);
-            couponRepository.save(coupon);
-            res.put("success", false);
-            res.put("message", "Coupon code has reached maximum uses.");
-            return ResponseEntity.ok(res);
-        }
-
-        double credit = (coupon.getDiscountAmount() != null && coupon.getDiscountAmount() > 0) ? coupon.getDiscountAmount() : 2.0;
-        double currentBalance = user.getWalletBalance() != null ? user.getWalletBalance() : 0.0;
-        double newBalance = currentBalance + credit;
-        user.setWalletBalance(newBalance);
-        userRepository.save(user);
-
-        coupon.setUsedCount((coupon.getUsedCount() != null ? coupon.getUsedCount() : 0) + 1);
-        if (coupon.getMaxUses() != null && coupon.getUsedCount() >= coupon.getMaxUses()) {
-            coupon.setActive(false);
-        }
-        couponRepository.save(coupon);
-
-        if (coupon.getMaxUses() != null) {
-            coupon.setMaxUses(coupon.getMaxUses() - 1);
-            if (coupon.getMaxUses() <= 0) {
-                coupon.setActive(false);
-            }
-            couponRepository.save(coupon);
-        }
-
-        res.put("success", true);
-        res.put("creditedAmount", credit);
-        res.put("newBalance", newBalance);
-        res.put("message", "Coupon redeemed successfully! ₹" + String.format("%.2f", credit) + " added to your wallet.");
-        return ResponseEntity.ok(res);
+        Map<String, Object> result = voucherService.redeemVoucherOrCoupon(user, couponCode);
+        return ResponseEntity.ok(result);
     }
 
     @PostMapping("/pay-via-wallet")

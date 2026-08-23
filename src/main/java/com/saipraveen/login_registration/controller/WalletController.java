@@ -23,6 +23,9 @@ public class WalletController {
     @Autowired
     private UserService userService;
 
+    @Autowired
+    private com.saipraveen.login_registration.service.VoucherService voucherService;
+
     @GetMapping("/balance")
     public ResponseEntity<?> getBalance(
             @RequestParam(required = false) Long userId,
@@ -86,5 +89,43 @@ public class WalletController {
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
+    }
+
+    @PostMapping("/redeem-voucher")
+    public ResponseEntity<?> redeemVoucher(
+            @RequestParam(required = false) Long userId,
+            @RequestParam(required = false) String email,
+            @RequestParam(required = false) String phoneNumber,
+            @RequestParam(required = false) String voucherCode,
+            @RequestParam(required = false) String code
+    ) {
+        String finalCode = (voucherCode != null && !voucherCode.trim().isEmpty()) ? voucherCode : code;
+        if (finalCode == null || finalCode.trim().isEmpty()) {
+            Map<String, Object> err = new HashMap<>();
+            err.put("success", false);
+            err.put("message", "Voucher code cannot be empty");
+            return ResponseEntity.badRequest().body(err);
+        }
+
+        User user = null;
+        if (userId != null) {
+            user = userService.getUserById(userId);
+        } else if (email != null && !email.trim().isEmpty()) {
+            user = userService.findByEmail(email.trim());
+        } else if (phoneNumber != null && !phoneNumber.trim().isEmpty()) {
+            String cleanPhone = phoneNumber.replaceAll("[^0-9]", "");
+            if (cleanPhone.length() > 10) cleanPhone = cleanPhone.substring(cleanPhone.length() - 10);
+            user = userService.findByEmail("wa_" + cleanPhone + "@whatsapp.cloudprint");
+        }
+
+        if (user == null) {
+            Map<String, Object> err = new HashMap<>();
+            err.put("success", false);
+            err.put("message", "User account not found");
+            return ResponseEntity.badRequest().body(err);
+        }
+
+        Map<String, Object> result = voucherService.redeemVoucherOrCoupon(user, finalCode);
+        return ResponseEntity.ok(result);
     }
 }

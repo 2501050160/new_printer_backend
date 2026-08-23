@@ -213,6 +213,30 @@ Double getNetRevenueSince(
 )
 Double getNetRevenueAll();
 
+@Query(
+    "SELECT COALESCE(SUM(p.price),0) FROM PdfFile p WHERE p.paymentStatus='PAID' AND p.status NOT IN ('CANCELLED') AND p.razorpayPaymentId IS NOT NULL AND p.razorpayPaymentId LIKE 'pay_%' AND p.paidAt >= :start"
+)
+Double getCashRevenueSince(
+        @Param("start") LocalDateTime start
+);
+
+@Query(
+    "SELECT COALESCE(SUM(p.price),0) FROM PdfFile p WHERE p.paymentStatus='PAID' AND p.status NOT IN ('CANCELLED') AND p.razorpayPaymentId IS NOT NULL AND p.razorpayPaymentId LIKE 'pay_%'"
+)
+Double getCashRevenueAll();
+
+@Query(
+    "SELECT COALESCE(SUM(p.price),0) FROM PdfFile p WHERE p.paymentStatus='PAID' AND p.status NOT IN ('CANCELLED') AND (p.razorpayPaymentId IS NULL OR p.razorpayPaymentId NOT LIKE 'pay_%') AND p.paidAt >= :start"
+)
+Double getVoucherVolumeSince(
+        @Param("start") LocalDateTime start
+);
+
+@Query(
+    "SELECT COALESCE(SUM(p.price),0) FROM PdfFile p WHERE p.paymentStatus='PAID' AND p.status NOT IN ('CANCELLED') AND (p.razorpayPaymentId IS NULL OR p.razorpayPaymentId NOT LIKE 'pay_%')"
+)
+Double getVoucherVolumeAll();
+
 @Modifying
 @Query(
     "UPDATE PdfFile p SET p.pdfData = null WHERE p.pdfData IS NOT NULL AND p.status IN ('COMPLETED','CANCELLED') AND p.finishedAt IS NOT NULL AND p.finishedAt <= :cutoff"
