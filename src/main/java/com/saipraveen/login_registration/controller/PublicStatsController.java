@@ -14,7 +14,7 @@ import com.saipraveen.login_registration.repository.PrinterConfigRepository;
 
 @RestController
 @RequestMapping("/api/public/stats")
-@CrossOrigin(origins = "*")
+@CrossOrigin(originPatterns = "*")
 public class PublicStatsController {
 
     @Autowired(required = false)

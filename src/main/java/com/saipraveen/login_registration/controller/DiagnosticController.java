@@ -8,13 +8,15 @@ import javax.sql.DataSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.saipraveen.login_registration.repository.CouponRepository;
 import com.saipraveen.login_registration.repository.RewardRepository;
 
 @RestController
-@CrossOrigin(origins = "*")
+@RequestMapping("/api/diag")
+@CrossOrigin(originPatterns = "*")
 public class DiagnosticController {
 
     @Autowired(required = false)
@@ -26,7 +28,7 @@ public class DiagnosticController {
     @Autowired(required = false)
     private DataSource dataSource;
 
-    @GetMapping("/api/diagnostic")
+    @GetMapping("/diagnostic")
     public Map<String, Object> diagnose() {
         Map<String, Object> result = new LinkedHashMap<>();
 

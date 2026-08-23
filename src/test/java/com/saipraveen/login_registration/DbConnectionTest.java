@@ -67,6 +67,27 @@ public class DbConnectionTest {
                 }
             }
 
+    @Test
+    public void testUsersTable() {
+        String url = "jdbc:postgresql://ep-silent-fog-azb5mawr-pooler.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require";
+        String user = "neondb_owner";
+        String pass = "npg_jShnM6rUD0lA";
+
+        try (Connection conn = DriverManager.getConnection(url, user, pass)) {
+            try (Statement stmt = conn.createStatement()) {
+                ResultSet rs = stmt.executeQuery("SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_name = 'users' ORDER BY ordinal_position");
+                System.out.println("\n=== USERS TABLE SCHEMA ===");
+                while (rs.next()) {
+                    System.out.println("  " + rs.getString("column_name") + " | " + rs.getString("data_type") + " | nullable=" + rs.getString("is_nullable"));
+                }
+            }
+
+            try (Statement stmt = conn.createStatement()) {
+                ResultSet rs = stmt.executeQuery("SELECT id, name, email, wallet_balance, referral_code, blocked, email_verified, college FROM users WHERE id = 6");
+                if (rs.next()) {
+                    System.out.println("User 6: id=" + rs.getLong("id") + ", email=" + rs.getString("email") + ", balance=" + rs.getDouble("wallet_balance") + ", college=" + rs.getString("college"));
+                }
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
