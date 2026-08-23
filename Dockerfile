@@ -23,4 +23,4 @@ COPY --from=builder /app/credentials ./credentials
 
 EXPOSE 8080
 
-ENTRYPOINT ["/bin/sh", "-c", "unset JAVA_TOOL_OPTIONS; unset _JAVA_OPTIONS; unset JAVA_OPTS; exec java -Xmx128m -Xms32m -Xss256k -XX:MaxMetaspaceSize=80m -XX:ReservedCodeCacheSize=24m -XX:CompressedClassSpaceSize=24m -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Dspring.main.lazy-initialization=true -Djava.security.egd=file:/dev/./urandom -jar app.jar"]
+ENTRYPOINT ["/bin/sh", "-c", "unset JAVA_TOOL_OPTIONS; unset _JAVA_OPTIONS; unset JAVA_OPTS; exec java -Xmx256m -Xms64m -Xss512k -XX:MaxMetaspaceSize=160m -XX:ReservedCodeCacheSize=48m -XX:CompressedClassSpaceSize=32m -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Dspring.main.lazy-initialization=true -Djava.security.egd=file:/dev/./urandom -jar app.jar"]

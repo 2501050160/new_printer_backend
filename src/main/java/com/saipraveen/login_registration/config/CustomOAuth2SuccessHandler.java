@@ -43,48 +43,69 @@ public class CustomOAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHa
             return;
         }
 
-        boolean isNewUser = false;
-        User user = userRepository.findByEmail(email);
-        if (user == null) {
-            isNewUser = true;
-            user = new User();
-            user.setEmail(email);
-            user.setName(name != null ? name : email.split("@")[0]);
-            user.setPassword(UUID.randomUUID().toString()); // Random password
-            user.setWalletBalance(0.0);
-            user.setBlocked(false);
-            user.setEmailVerified(true);
-            
-            // Generate referral code
-            String code;
-            do {
-                code = String.valueOf(100000 + new java.util.Random().nextInt(900000));
-            } while (userRepository.findByReferralCode(code) != null);
-            user.setReferralCode(code);
-            
-            user = userRepository.save(user);
+        try {
+            boolean isNewUser = false;
+            User user = userRepository.findByEmail(email);
+            if (user == null) {
+                isNewUser = true;
+                user = new User();
+                user.setEmail(email);
+                
+                String displayName = name;
+                if (displayName == null || displayName.isBlank()) {
+                    displayName = oAuth2User.getAttribute("given_name");
+                    if (displayName == null || displayName.isBlank()) {
+                        displayName = email.split("@")[0];
+                    }
+                }
+                user.setName(displayName);
+                user.setPassword(UUID.randomUUID().toString()); // Random password
+                user.setWalletBalance(0.0);
+                user.setBlocked(false);
+                user.setEmailVerified(true);
+                
+                // Generate referral code
+                String code;
+                do {
+                    code = String.valueOf(100000 + new java.util.Random().nextInt(900000));
+                } while (userRepository.findByReferralCode(code) != null);
+                user.setReferralCode(code);
+                
+                user = userRepository.save(user);
+            }
+
+            String redirectBase = CookieUtils.getCookie(request, HttpCookieOAuth2AuthorizationRequestRepository.REDIRECT_URI_PARAM_COOKIE_NAME)
+                    .map(jakarta.servlet.http.Cookie::getValue)
+                    .orElse(frontendUrl);
+
+            if (redirectBase == null || redirectBase.isBlank() || redirectBase.equals("https://cloudprint.website")) {
+                redirectBase = "https://www.cloudprint.website";
+            }
+            if (redirectBase.endsWith("/")) {
+                redirectBase = redirectBase.substring(0, redirectBase.length() - 1);
+            }
+
+            String targetUrl = UriComponentsBuilder.fromUriString(redirectBase + "/login")
+                    .queryParam("oauth_success", "true")
+                    .queryParam("is_new_user", String.valueOf(isNewUser))
+                    .queryParam("id", user.getId())
+                    .queryParam("name", user.getName() != null ? user.getName() : "")
+                    .queryParam("email", user.getEmail() != null ? user.getEmail() : "")
+                    .queryParam("walletBalance", user.getWalletBalance() != null ? user.getWalletBalance() : 0.0)
+                    .build().toUriString();
+
+            getRedirectStrategy().sendRedirect(request, response, targetUrl);
+        } catch (Exception e) {
+            String redirectBase = CookieUtils.getCookie(request, HttpCookieOAuth2AuthorizationRequestRepository.REDIRECT_URI_PARAM_COOKIE_NAME)
+                    .map(jakarta.servlet.http.Cookie::getValue)
+                    .orElse(frontendUrl);
+            if (redirectBase == null || redirectBase.isBlank() || redirectBase.equals("https://cloudprint.website")) {
+                redirectBase = "https://www.cloudprint.website";
+            }
+            if (redirectBase.endsWith("/")) {
+                redirectBase = redirectBase.substring(0, redirectBase.length() - 1);
+            }
+            response.sendRedirect(redirectBase + "/login?error=" + java.net.URLEncoder.encode("Failed to process account: " + e.getMessage(), java.nio.charset.StandardCharsets.UTF_8));
         }
-
-        String redirectBase = CookieUtils.getCookie(request, HttpCookieOAuth2AuthorizationRequestRepository.REDIRECT_URI_PARAM_COOKIE_NAME)
-                .map(jakarta.servlet.http.Cookie::getValue)
-                .orElse(frontendUrl);
-
-        if (redirectBase == null || redirectBase.isBlank() || redirectBase.equals("https://cloudprint.website")) {
-            redirectBase = "https://www.cloudprint.website";
-        }
-        if (redirectBase.endsWith("/")) {
-            redirectBase = redirectBase.substring(0, redirectBase.length() - 1);
-        }
-
-        String targetUrl = UriComponentsBuilder.fromUriString(redirectBase + "/login")
-                .queryParam("oauth_success", "true")
-                .queryParam("is_new_user", String.valueOf(isNewUser))
-                .queryParam("id", user.getId())
-                .queryParam("name", user.getName())
-                .queryParam("email", user.getEmail())
-                .queryParam("walletBalance", user.getWalletBalance())
-                .build().toUriString();
-
-        getRedirectStrategy().sendRedirect(request, response, targetUrl);
     }
 }

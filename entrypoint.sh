@@ -10,12 +10,12 @@ echo "Starting Spring Boot on Render with ultra-lean memory JVM profile..."
 
 # Execute Java with strict single Serial GC and memory bounds (Ideal for Render 512MB limit)
 exec java \
-  -Xmx192m \
+  -Xmx256m \
   -Xms64m \
-  -Xss256k \
-  -XX:MaxMetaspaceSize=96m \
+  -Xss512k \
+  -XX:MaxMetaspaceSize=160m \
   -XX:CompressedClassSpaceSize=32m \
-  -XX:ReservedCodeCacheSize=32m \
+  -XX:ReservedCodeCacheSize=48m \
   -XX:+UseSerialGC \
   -XX:TieredStopAtLevel=1 \
   -XX:CICompilerCount=2 \
