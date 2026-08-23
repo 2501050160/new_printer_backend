@@ -10,7 +10,7 @@ WORKDIR /app
 COPY . .
 
 RUN chmod +x mvnw
-RUN ./mvnw clean package -DskipTests
+RUN ./mvnw clean package -Dmaven.test.skip=true
 
 # ----------------- Stage 2: Ultra-Lean Runtime -----------------
 FROM eclipse-temurin:17-jre-alpine
