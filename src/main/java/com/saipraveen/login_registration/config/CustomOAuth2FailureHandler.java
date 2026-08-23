@@ -6,6 +6,7 @@ import java.nio.charset.StandardCharsets;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationFailureHandler;
@@ -20,6 +21,9 @@ public class CustomOAuth2FailureHandler extends SimpleUrlAuthenticationFailureHa
 
     private static final Logger log = LoggerFactory.getLogger(CustomOAuth2FailureHandler.class);
 
+    @Autowired
+    private HttpCookieOAuth2AuthorizationRequestRepository cookieAuthorizationRequestRepository;
+
     @Value("${app.frontend.url:https://cloudprint.website}")
     private String frontendUrl;
 
@@ -27,6 +31,8 @@ public class CustomOAuth2FailureHandler extends SimpleUrlAuthenticationFailureHa
     public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response,
             AuthenticationException exception) throws IOException, ServletException {
         
+        cookieAuthorizationRequestRepository.removeAuthorizationRequestCookies(request, response);
+
         log.error("Google OAuth2 Authentication Failed: {}", exception.getMessage(), exception);
         
         String errorMessage = "Google sign-in failed. Please try again.";

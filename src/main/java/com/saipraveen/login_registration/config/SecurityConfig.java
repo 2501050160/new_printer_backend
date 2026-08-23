@@ -20,6 +20,9 @@ public class SecurityConfig {
     @Autowired
     private CustomOAuth2FailureHandler oAuth2FailureHandler;
 
+    @Autowired
+    private HttpCookieOAuth2AuthorizationRequestRepository cookieAuthorizationRequestRepository;
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http)
             throws Exception {
@@ -31,6 +34,9 @@ public class SecurityConfig {
                     .anyRequest().permitAll())
             .formLogin(form -> form.disable())
             .oauth2Login(oauth2 -> oauth2
+                .authorizationEndpoint(auth -> auth
+                    .authorizationRequestRepository(cookieAuthorizationRequestRepository)
+                )
                 .successHandler(oAuth2SuccessHandler)
                 .failureHandler(oAuth2FailureHandler)
             );
