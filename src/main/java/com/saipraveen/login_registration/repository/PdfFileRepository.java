@@ -155,9 +155,25 @@ List<PdfFile> findExpiredPendingScanOrders(
 List<PdfFile> findAllQueuedOrders();
 
 @Query(
-    "SELECT p FROM PdfFile p WHERE p.paymentStatus='PAID' AND p.status IN ('QUEUE','PRINTING') AND p.queuedAt IS NOT NULL AND p.queuedAt <= :cutoff"
+    "SELECT p FROM PdfFile p WHERE p.paymentStatus='PAID' AND p.status = 'QUEUE' AND (" +
+    " (p.queuedAt IS NOT NULL AND p.queuedAt <= :cutoff) OR" +
+    " (p.queuedAt IS NULL AND p.paidAt IS NOT NULL AND p.paidAt <= :cutoff) OR" +
+    " (p.queuedAt IS NULL AND p.paidAt IS NULL AND p.uploadTime <= :cutoff)" +
+    ")"
 )
 List<PdfFile> findTimedOutOrders(
+        @Param("cutoff") LocalDateTime cutoff
+);
+
+@Query(
+    "SELECT p FROM PdfFile p WHERE p.paymentStatus='PAID' AND p.status = 'PRINTING' AND (" +
+    " (p.printingStartedAt IS NOT NULL AND p.printingStartedAt <= :cutoff) OR" +
+    " (p.printingStartedAt IS NULL AND p.queuedAt IS NOT NULL AND p.queuedAt <= :cutoff) OR" +
+    " (p.printingStartedAt IS NULL AND p.queuedAt IS NULL AND p.paidAt IS NOT NULL AND p.paidAt <= :cutoff) OR" +
+    " (p.printingStartedAt IS NULL AND p.queuedAt IS NULL AND p.paidAt IS NULL AND p.uploadTime <= :cutoff)" +
+    ")"
+)
+List<PdfFile> findStuckPrintingOrders(
         @Param("cutoff") LocalDateTime cutoff
 );
 

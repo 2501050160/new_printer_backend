@@ -65,7 +65,7 @@ public class QueueService {
         }
     }
 
-    @Scheduled(fixedRate = 30000)
+    @Scheduled(fixedRate = 15000)
     @Transactional
     public void cancelTimedOutOrders() {
 
@@ -93,6 +93,21 @@ public class QueueService {
                             + " (Print not completed within "
                             + fulfillmentTimeoutMinutes
                             + " minutes)"
+            );
+        }
+
+        // 5-Minute stuck PRINTING orders timeout (auto-refund and remove from display screen if agent crashed)
+        LocalDateTime printingCutoff = LocalDateTime.now().minusMinutes(5);
+        List<PdfFile> stuckPrinting = repository.findStuckPrintingOrders(printingCutoff);
+        for (PdfFile pdf : stuckPrinting) {
+            refundAndCancel(
+                    pdf,
+                    "Printing failed or timed out (exceeded 5 minutes in PRINTING state)"
+            );
+
+            System.out.println(
+                    "Stuck PRINTING order timed out (5 mins), refunded and cancelled: "
+                            + pdf.getOrderId()
             );
         }
 
