@@ -38,6 +38,75 @@ public class QueueService {
     @Value("${print.fulfillment-timeout-minutes:30}")
     private int fulfillmentTimeoutMinutes;
 
+    @Autowired
+    private com.saipraveen.login_registration.repository.CampusBlockRepository campusBlockRepository;
+
+    public boolean isOtpRequiredForOrder(PdfFile pdf) {
+        if (pdf == null) return true;
+
+        String channel = (pdf.getOrderChannel() != null && !pdf.getOrderChannel().isEmpty())
+                ? pdf.getOrderChannel().toUpperCase().trim()
+                : "WEB";
+        String block = pdf.getBlockLocation() != null ? pdf.getBlockLocation().trim() : "";
+        String college = "KLU";
+        if (!block.isEmpty() && campusBlockRepository != null) {
+            try {
+                com.saipraveen.login_registration.entity.CampusBlock blk = campusBlockRepository.findByName(block);
+                if (blk != null && blk.getCollege() != null && !blk.getCollege().isEmpty()) {
+                    college = blk.getCollege().trim();
+                }
+            } catch (Exception ignored) {}
+        }
+
+        // 1. Block-Level Channel Override e.g. "otp_required_whatsapp_C Block" or "otp_required_web_C Block"
+        if (!block.isEmpty()) {
+            String blockChannelKey = "otp_required_" + channel.toLowerCase() + "_" + block;
+            String blockChannelVal = systemSettingService.getSetting(blockChannelKey, null);
+            if (blockChannelVal != null && !blockChannelVal.isEmpty()) {
+                return Boolean.parseBoolean(blockChannelVal);
+            }
+
+            // Generic Block Override e.g. "otp_required_block_C Block"
+            String blockKey = "otp_required_block_" + block;
+            String blockVal = systemSettingService.getSetting(blockKey, null);
+            if (blockVal != null && !blockVal.isEmpty()) {
+                return Boolean.parseBoolean(blockVal);
+            }
+
+            // PrinterConfig hardware fallback
+            try {
+                com.saipraveen.login_registration.entity.PrinterConfig config = printerConfigService.getPrinterByBlock(block);
+                if (config != null && config.getOtpEnabled() != null) {
+                    if (Boolean.FALSE.equals(config.getOtpEnabled())) {
+                        return false;
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+
+        // 2. College-Level Channel Override e.g. "otp_required_whatsapp_KLU" or "otp_required_web_KLU"
+        if (!college.isEmpty()) {
+            String collegeChannelKey = "otp_required_" + channel.toLowerCase() + "_" + college;
+            String collegeChannelVal = systemSettingService.getSetting(collegeChannelKey, null);
+            if (collegeChannelVal != null && !collegeChannelVal.isEmpty()) {
+                return Boolean.parseBoolean(collegeChannelVal);
+            }
+
+            String collegeKey = "otp_required_college_" + college;
+            String collegeVal = systemSettingService.getSetting(collegeKey, null);
+            if (collegeVal != null && !collegeVal.isEmpty()) {
+                return Boolean.parseBoolean(collegeVal);
+            }
+        }
+
+        // 3. Global Channel Settings (defaults to true)
+        if ("WHATSAPP".equalsIgnoreCase(channel)) {
+            return systemSettingService.getSettingBool("whatsapp_otp_required", true);
+        } else {
+            return systemSettingService.getSettingBool("web_otp_required", true);
+        }
+    }
+
     @Scheduled(fixedRate = 5000)
     @Transactional
     public void promoteExpiredCancelWindows() {
@@ -48,16 +117,9 @@ public class QueueService {
                 );
 
         for (PdfFile pdf : expired) {
-            com.saipraveen.login_registration.entity.PrinterConfig config = null;
-            try {
-                config = printerConfigService.getPrinterByBlock(pdf.getBlockLocation());
-            } catch (Exception e) {
-                System.err.println("Failed to fetch printer config: " + e.getMessage());
-            }
-
-            if (config != null && Boolean.FALSE.equals(config.getOtpEnabled())) {
+            if (!isOtpRequiredForOrder(pdf)) {
                 repository.updateStatusAndQueuedAtByOrderId(pdf.getOrderId(), "QUEUE", LocalDateTime.now());
-                System.out.println("Order promoted directly to QUEUE (OTP disabled for block): " + pdf.getOrderId());
+                System.out.println("Order promoted directly to QUEUE (OTP bypassed): " + pdf.getOrderId());
             } else {
                 repository.updateStatusByOrderId(pdf.getOrderId(), "PENDING_SCAN");
                 System.out.println("Order held in PENDING_SCAN for OTP verification: " + pdf.getOrderId());
@@ -211,16 +273,9 @@ public class QueueService {
             throw new RuntimeException("Order not found");
         }
         if ("CANCEL_WINDOW".equals(pdf.getStatus())) {
-            com.saipraveen.login_registration.entity.PrinterConfig config = null;
-            try {
-                config = printerConfigService.getPrinterByBlock(pdf.getBlockLocation());
-            } catch (Exception e) {
-                System.err.println("Failed to fetch printer config: " + e.getMessage());
-            }
-
             String newStatus = "PENDING_SCAN";
             LocalDateTime queuedAt = null;
-            if (config != null && Boolean.FALSE.equals(config.getOtpEnabled())) {
+            if (!isOtpRequiredForOrder(pdf)) {
                 newStatus = "QUEUE";
                 queuedAt = LocalDateTime.now();
                 repository.updateStatusAndQueuedAtByOrderId(orderId, newStatus, queuedAt);
@@ -404,13 +459,7 @@ public class QueueService {
             pdf.setStatus("SCHEDULED");
         } else {
             pdf.setCancelWindowEndsAt(now);
-            com.saipraveen.login_registration.entity.PrinterConfig config = null;
-            try {
-                config = printerConfigService.getPrinterByBlock(pdf.getBlockLocation());
-            } catch (Exception e) {
-                System.err.println("Failed to fetch printer config: " + e.getMessage());
-            }
-            if (config != null && Boolean.FALSE.equals(config.getOtpEnabled())) {
+            if (!isOtpRequiredForOrder(pdf)) {
                 pdf.setStatus("QUEUE");
                 pdf.setQueuedAt(now);
             } else {
@@ -512,16 +561,9 @@ public class QueueService {
         LocalDateTime cutoff = LocalDateTime.now().plusMinutes(5);
         List<PdfFile> pendingScheduled = repository.findPendingScheduledOrders(cutoff);
         for (PdfFile pdf : pendingScheduled) {
-            com.saipraveen.login_registration.entity.PrinterConfig config = null;
-            try {
-                config = printerConfigService.getPrinterByBlock(pdf.getBlockLocation());
-            } catch (Exception e) {
-                System.err.println("Failed to fetch printer config: " + e.getMessage());
-            }
-
-            if (config != null && Boolean.FALSE.equals(config.getOtpEnabled())) {
+            if (!isOtpRequiredForOrder(pdf)) {
                 repository.updateStatusAndQueuedAtByOrderId(pdf.getOrderId(), "QUEUE", LocalDateTime.now());
-                System.out.println("Scheduled order promoted directly to QUEUE (OTP disabled): " + pdf.getOrderId());
+                System.out.println("Scheduled order promoted directly to QUEUE (OTP bypassed): " + pdf.getOrderId());
             } else {
                 repository.updateStatusAndCancelWindowEndsAtByOrderId(pdf.getOrderId(), "PENDING_SCAN", LocalDateTime.now().plusSeconds(30));
                 System.out.println("Scheduled order held in PENDING_SCAN for OTP: " + pdf.getOrderId());

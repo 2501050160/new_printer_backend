@@ -65,6 +65,7 @@ public class DbConnectionTest {
                 while (rs.next()) {
                     System.out.println("Row: id=" + rs.getLong("id") + " code=" + rs.getString("coupon_code") + " pct=" + rs.getDouble("discount_percentage") + " active=" + rs.getBoolean("active"));
                 }
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }

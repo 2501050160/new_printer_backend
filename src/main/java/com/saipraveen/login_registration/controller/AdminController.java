@@ -56,6 +56,9 @@ public class AdminController {
     @Autowired
     private com.saipraveen.login_registration.service.SystemSettingService systemSettingService;
 
+    @Autowired
+    private com.saipraveen.login_registration.repository.CampusBlockRepository campusBlockRepository;
+
     @org.springframework.web.bind.annotation.GetMapping("/users")
     public ResponseEntity<?> getAllUsers() {
         return ResponseEntity.ok(userService.getAllUsers());
@@ -187,6 +190,8 @@ public class AdminController {
         settings.put("displayAdPhotoEnabled", systemSettingService.getSettingBool("display_ad_photo_enabled", true));
         settings.put("testerModeEnabled", systemSettingService.getSettingBool("tester_mode_enabled", false));
         settings.put("testerUsernames", systemSettingService.getSetting("tester_usernames", ""));
+        settings.put("webOtpRequired", systemSettingService.getSettingBool("web_otp_required", true));
+        settings.put("whatsappOtpRequired", systemSettingService.getSettingBool("whatsapp_otp_required", true));
         return ResponseEntity.ok(settings);
     }
 
@@ -255,7 +260,111 @@ public class AdminController {
         if (request.containsKey("testerUsernames")) {
             systemSettingService.setSetting("tester_usernames", String.valueOf(request.get("testerUsernames")));
         }
+        if (request.containsKey("webOtpRequired")) {
+            systemSettingService.setSetting("web_otp_required", String.valueOf(request.get("webOtpRequired")));
+        }
+        if (request.containsKey("whatsappOtpRequired")) {
+            systemSettingService.setSetting("whatsapp_otp_required", String.valueOf(request.get("whatsappOtpRequired")));
+        }
         return ResponseEntity.ok("Settings updated successfully");
+    }
+
+    @org.springframework.web.bind.annotation.GetMapping("/settings/otp-rules")
+    public ResponseEntity<?> getOtpRules() {
+        java.util.Map<String, Object> rules = new java.util.HashMap<>();
+        rules.put("webOtpRequired", systemSettingService.getSettingBool("web_otp_required", true));
+        rules.put("whatsappOtpRequired", systemSettingService.getSettingBool("whatsapp_otp_required", true));
+
+        // Return per-college and per-block overrides
+        java.util.Map<String, Object> collegeRules = new java.util.HashMap<>();
+        java.util.Map<String, Object> blockRules = new java.util.HashMap<>();
+
+        // Fetch all blocks to discover configured entities
+        try {
+            java.util.List<com.saipraveen.login_registration.entity.CampusBlock> blocks = campusBlockRepository.findAll();
+            for (com.saipraveen.login_registration.entity.CampusBlock b : blocks) {
+                String blkName = b.getName();
+                String colName = b.getCollege() != null ? b.getCollege() : "KLU";
+
+                // Block overrides
+                java.util.Map<String, Object> bMap = new java.util.HashMap<>();
+                String bWebVal = systemSettingService.getSetting("otp_required_web_" + blkName, null);
+                String bWaVal = systemSettingService.getSetting("otp_required_whatsapp_" + blkName, null);
+                String bGenVal = systemSettingService.getSetting("otp_required_block_" + blkName, null);
+                bMap.put("webOtp", bWebVal != null ? Boolean.parseBoolean(bWebVal) : null);
+                bMap.put("whatsappOtp", bWaVal != null ? Boolean.parseBoolean(bWaVal) : null);
+                bMap.put("genericOtp", bGenVal != null ? Boolean.parseBoolean(bGenVal) : null);
+                blockRules.put(blkName, bMap);
+
+                // College overrides
+                if (!collegeRules.containsKey(colName)) {
+                    java.util.Map<String, Object> cMap = new java.util.HashMap<>();
+                    String cWebVal = systemSettingService.getSetting("otp_required_web_" + colName, null);
+                    String cWaVal = systemSettingService.getSetting("otp_required_whatsapp_" + colName, null);
+                    String cGenVal = systemSettingService.getSetting("otp_required_college_" + colName, null);
+                    cMap.put("webOtp", cWebVal != null ? Boolean.parseBoolean(cWebVal) : null);
+                    cMap.put("whatsappOtp", cWaVal != null ? Boolean.parseBoolean(cWaVal) : null);
+                    cMap.put("genericOtp", cGenVal != null ? Boolean.parseBoolean(cGenVal) : null);
+                    collegeRules.put(colName, cMap);
+                }
+            }
+        } catch (Exception ignored) {}
+
+        rules.put("collegeRules", collegeRules);
+        rules.put("blockRules", blockRules);
+        return ResponseEntity.ok(rules);
+    }
+
+    @PostMapping("/settings/otp-rules/update")
+    public ResponseEntity<?> updateOtpRules(@RequestBody java.util.Map<String, Object> request) {
+        if (request.containsKey("webOtpRequired")) {
+            systemSettingService.setSetting("web_otp_required", String.valueOf(request.get("webOtpRequired")));
+        }
+        if (request.containsKey("whatsappOtpRequired")) {
+            systemSettingService.setSetting("whatsapp_otp_required", String.valueOf(request.get("whatsappOtpRequired")));
+        }
+
+        if (request.containsKey("collegeOverrides") && request.get("collegeOverrides") instanceof java.util.Map) {
+            java.util.Map<?, ?> cMap = (java.util.Map<?, ?>) request.get("collegeOverrides");
+            for (java.util.Map.Entry<?, ?> entry : cMap.entrySet()) {
+                String college = String.valueOf(entry.getKey());
+                if (entry.getValue() instanceof java.util.Map) {
+                    java.util.Map<?, ?> valMap = (java.util.Map<?, ?>) entry.getValue();
+                    if (valMap.containsKey("webOtp")) {
+                        Object v = valMap.get("webOtp");
+                        if (v == null) systemSettingService.setSetting("otp_required_web_" + college, "");
+                        else systemSettingService.setSetting("otp_required_web_" + college, String.valueOf(v));
+                    }
+                    if (valMap.containsKey("whatsappOtp")) {
+                        Object v = valMap.get("whatsappOtp");
+                        if (v == null) systemSettingService.setSetting("otp_required_whatsapp_" + college, "");
+                        else systemSettingService.setSetting("otp_required_whatsapp_" + college, String.valueOf(v));
+                    }
+                }
+            }
+        }
+
+        if (request.containsKey("blockOverrides") && request.get("blockOverrides") instanceof java.util.Map) {
+            java.util.Map<?, ?> bMap = (java.util.Map<?, ?>) request.get("blockOverrides");
+            for (java.util.Map.Entry<?, ?> entry : bMap.entrySet()) {
+                String block = String.valueOf(entry.getKey());
+                if (entry.getValue() instanceof java.util.Map) {
+                    java.util.Map<?, ?> valMap = (java.util.Map<?, ?>) entry.getValue();
+                    if (valMap.containsKey("webOtp")) {
+                        Object v = valMap.get("webOtp");
+                        if (v == null) systemSettingService.setSetting("otp_required_web_" + block, "");
+                        else systemSettingService.setSetting("otp_required_web_" + block, String.valueOf(v));
+                    }
+                    if (valMap.containsKey("whatsappOtp")) {
+                        Object v = valMap.get("whatsappOtp");
+                        if (v == null) systemSettingService.setSetting("otp_required_whatsapp_" + block, "");
+                        else systemSettingService.setSetting("otp_required_whatsapp_" + block, String.valueOf(v));
+                    }
+                }
+            }
+        }
+
+        return ResponseEntity.ok("OTP rules updated successfully");
     }
 
     @org.springframework.web.bind.annotation.GetMapping("/settings/offpeak")

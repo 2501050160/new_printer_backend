@@ -45,6 +45,9 @@ public class BotPrintController {
     @Autowired
     private com.saipraveen.login_registration.service.SystemSettingService systemSettingService;
 
+    @Autowired
+    private com.saipraveen.login_registration.service.QueueService queueService;
+
     @org.springframework.beans.factory.annotation.Value("${app.frontend.url:https://cloudprint.website}")
     private String frontendUrl;
 
@@ -202,6 +205,8 @@ public class BotPrintController {
             String realOrderId = updated.getOrderId() != null ? updated.getOrderId() : pdf.getOrderId();
             String checkoutUrl = frontendUrl + "/pay?orderId=" + realOrderId;
 
+            boolean otpRequired = queueService.isOtpRequiredForOrder(latestPdf != null ? latestPdf : updated);
+
             StringBuilder botMsg = new StringBuilder();
             botMsg.append("🖨️ *Cloud Print Order Created!*\n");
             botMsg.append("-----------------------------\n");
@@ -217,7 +222,11 @@ public class BotPrintController {
             } else if (partialWallet) {
                 botMsg.append("💳 *Remaining to Pay*: ₹").append(String.format("%.2f", finalPriceToPay)).append("\n");
             }
-            botMsg.append("📺 *Release OTP*: Displayed on *").append(blockLocation).append(" TV Display Panel*\n");
+            if (otpRequired) {
+                botMsg.append("📺 *Release OTP*: Displayed on *").append(blockLocation).append(" TV Display Panel*\n");
+            } else {
+                botMsg.append("🚀 *Direct Print*: OTP bypassed. Spooling directly to printer tray!\n");
+            }
             botMsg.append("📍 *Target Kiosk*: ").append(blockLocation).append("\n\n");
             if (!paidViaWallet) {
                 botMsg.append("👉 *Complete Payment*: ").append(checkoutUrl);
@@ -227,6 +236,7 @@ public class BotPrintController {
             response.put("success", true);
             response.put("orderId", realOrderId);
             response.put("otp", realOtp);
+            response.put("otpRequired", otpRequired);
             response.put("totalPages", pages);
             response.put("college", college);
             response.put("ratePerPage", rate);
