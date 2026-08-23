@@ -132,16 +132,46 @@ public class AlertNotificationService {
         }
 
         Map<String, Object> result = new HashMap<>();
+        String alertId = "ALT_" + System.currentTimeMillis() + "_" + (int)(Math.random() * 1000);
+        result.put("id", alertId);
         result.put("success", true);
         result.put("alertType", type);
         result.put("blockLocation", location);
         result.put("printerName", printer);
+        result.put("details", desc);
         result.put("adminPhone", ADMIN_PHONE);
         result.put("agentPhone", AGENT_PHONE);
         result.put("adminEmail", ADMIN_EMAIL);
         result.put("autoRefund", refundStatus);
         result.put("timestamp", timestamp);
+        result.put("message", String.format(
+            "🚨 *CLOUD PRINT KIOSK ALERT*\n" +
+            "━━━━━━━━━━━━━━━━━━━━━━\n" +
+            "📍 *Location*: %s\n" +
+            "🖨️ *Printer*: %s\n" +
+            "⚠️ *Status*: *%s*\n" +
+            "📝 *Details*: %s\n" +
+            "🆔 *Order ID*: %s\n" +
+            "⏱️ *Time*: %s\n" +
+            "━━━━━━━━━━━━━━━━━━━━━━\n" +
+            "📞 Admin Phone: +91 %s",
+            location, printer, type, desc, (orderId != null ? orderId : "None"), timestamp, ADMIN_PHONE
+        ));
+
+        pendingAlerts.add(result);
         return result;
+    }
+
+    private static final java.util.List<Map<String, Object>> pendingAlerts = new java.util.concurrent.CopyOnWriteArrayList<>();
+
+    public static java.util.List<Map<String, Object>> getPendingAlerts() {
+        return new java.util.ArrayList<>(pendingAlerts);
+    }
+
+    public static void acknowledgeAlert(String id) {
+        if (id != null) {
+            pendingAlerts.removeIf(a -> id.equalsIgnoreCase(String.valueOf(a.get("id"))));
+        }
     }
 
     private void sendEmailAlert(String location, String printer, String type, String desc, String orderId, String timestamp) {

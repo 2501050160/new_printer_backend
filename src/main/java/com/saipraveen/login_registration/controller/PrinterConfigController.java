@@ -103,12 +103,27 @@ public ResponseEntity<?> savePrinter(
             @RequestParam Integer paperCount
     ) {
         service.updatePaperCount(blockLocation, paperCount);
-        if (paperCount != null && paperCount <= 0) {
-            alertService.triggerPrinterAlert(blockLocation, null, "OUT_OF_PAPER", "Paper tray is empty (0 sheets remaining).", null, null);
-        } else if (paperCount != null && paperCount <= 15) {
-            alertService.triggerPrinterAlert(blockLocation, null, "LOW_PAPER", "Paper count is critically low (" + paperCount + " sheets remaining).", null, null);
-        }
+        String alertType = (paperCount != null && paperCount <= 0) ? "OUT_OF_PAPER" : 
+                           (paperCount != null && paperCount <= 15) ? "LOW_PAPER" : "PAPER_LEVEL_UPDATE";
+        String msg = (paperCount != null && paperCount <= 0) 
+            ? "Paper tray is empty (0 sheets remaining)." 
+            : (paperCount != null && paperCount <= 15) 
+            ? "Paper count is critically low (" + paperCount + " sheets remaining)." 
+            : "Paper level updated to " + paperCount + " sheets at " + blockLocation + ".";
+            
+        alertService.triggerPrinterAlert(blockLocation, null, alertType, msg, null, null);
         return ResponseEntity.ok("Paper count updated successfully");
+    }
+
+    @GetMapping("/alerts/pending")
+    public ResponseEntity<?> getPendingAlerts() {
+        return ResponseEntity.ok(com.saipraveen.login_registration.service.AlertNotificationService.getPendingAlerts());
+    }
+
+    @PostMapping("/alerts/ack")
+    public ResponseEntity<?> acknowledgeAlert(@RequestParam String id) {
+        com.saipraveen.login_registration.service.AlertNotificationService.acknowledgeAlert(id);
+        return ResponseEntity.ok("Alert acknowledged");
     }
 
     @PostMapping("/report-issue")

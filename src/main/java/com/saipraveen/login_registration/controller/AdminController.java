@@ -272,8 +272,10 @@ public class AdminController {
     @org.springframework.web.bind.annotation.GetMapping("/settings/otp-rules")
     public ResponseEntity<?> getOtpRules() {
         java.util.Map<String, Object> rules = new java.util.HashMap<>();
-        rules.put("webOtpRequired", systemSettingService.getSettingBool("web_otp_required", true));
-        rules.put("whatsappOtpRequired", systemSettingService.getSettingBool("whatsapp_otp_required", true));
+        boolean defaultWeb = systemSettingService.getSettingBool("web_otp_required", true);
+        boolean defaultWa = systemSettingService.getSettingBool("whatsapp_otp_required", true);
+        rules.put("webOtpRequired", defaultWeb);
+        rules.put("whatsappOtpRequired", defaultWa);
 
         // Return per-college and per-block overrides
         java.util.Map<String, Object> collegeRules = new java.util.HashMap<>();
@@ -290,10 +292,12 @@ public class AdminController {
                 java.util.Map<String, Object> bMap = new java.util.HashMap<>();
                 String bWebVal = systemSettingService.getSetting("otp_required_web_" + blkName, null);
                 String bWaVal = systemSettingService.getSetting("otp_required_whatsapp_" + blkName, null);
-                String bGenVal = systemSettingService.getSetting("otp_required_block_" + blkName, null);
-                bMap.put("webOtp", bWebVal != null ? Boolean.parseBoolean(bWebVal) : null);
-                bMap.put("whatsappOtp", bWaVal != null ? Boolean.parseBoolean(bWaVal) : null);
-                bMap.put("genericOtp", bGenVal != null ? Boolean.parseBoolean(bGenVal) : null);
+                
+                boolean webOtp = (bWebVal != null && !bWebVal.trim().isEmpty()) ? Boolean.parseBoolean(bWebVal) : defaultWeb;
+                boolean waOtp = (bWaVal != null && !bWaVal.trim().isEmpty()) ? Boolean.parseBoolean(bWaVal) : defaultWa;
+
+                bMap.put("webOtp", webOtp);
+                bMap.put("whatsappOtp", waOtp);
                 blockRules.put(blkName, bMap);
 
                 // College overrides
@@ -301,10 +305,10 @@ public class AdminController {
                     java.util.Map<String, Object> cMap = new java.util.HashMap<>();
                     String cWebVal = systemSettingService.getSetting("otp_required_web_" + colName, null);
                     String cWaVal = systemSettingService.getSetting("otp_required_whatsapp_" + colName, null);
-                    String cGenVal = systemSettingService.getSetting("otp_required_college_" + colName, null);
-                    cMap.put("webOtp", cWebVal != null ? Boolean.parseBoolean(cWebVal) : null);
-                    cMap.put("whatsappOtp", cWaVal != null ? Boolean.parseBoolean(cWaVal) : null);
-                    cMap.put("genericOtp", cGenVal != null ? Boolean.parseBoolean(cGenVal) : null);
+                    boolean cWebOtp = (cWebVal != null && !cWebVal.trim().isEmpty()) ? Boolean.parseBoolean(cWebVal) : defaultWeb;
+                    boolean cWaOtp = (cWaVal != null && !cWaVal.trim().isEmpty()) ? Boolean.parseBoolean(cWaVal) : defaultWa;
+                    cMap.put("webOtp", cWebOtp);
+                    cMap.put("whatsappOtp", cWaOtp);
                     collegeRules.put(colName, cMap);
                 }
             }
