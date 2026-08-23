@@ -65,7 +65,18 @@ public class CustomOAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHa
             user = userRepository.save(user);
         }
 
-        String targetUrl = UriComponentsBuilder.fromUriString(frontendUrl + "/login")
+        String redirectBase = CookieUtils.getCookie(request, HttpCookieOAuth2AuthorizationRequestRepository.REDIRECT_URI_PARAM_COOKIE_NAME)
+                .map(jakarta.servlet.http.Cookie::getValue)
+                .orElse(frontendUrl);
+
+        if (redirectBase == null || redirectBase.isBlank() || redirectBase.equals("https://cloudprint.website")) {
+            redirectBase = "https://www.cloudprint.website";
+        }
+        if (redirectBase.endsWith("/")) {
+            redirectBase = redirectBase.substring(0, redirectBase.length() - 1);
+        }
+
+        String targetUrl = UriComponentsBuilder.fromUriString(redirectBase + "/login")
                 .queryParam("oauth_success", "true")
                 .queryParam("is_new_user", String.valueOf(isNewUser))
                 .queryParam("id", user.getId())

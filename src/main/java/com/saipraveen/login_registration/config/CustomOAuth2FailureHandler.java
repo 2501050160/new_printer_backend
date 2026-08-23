@@ -49,7 +49,18 @@ public class CustomOAuth2FailureHandler extends SimpleUrlAuthenticationFailureHa
             }
         }
 
-        String targetUrl = frontendUrl + "/login?error=" + URLEncoder.encode(errorMessage, StandardCharsets.UTF_8);
+        String redirectBase = CookieUtils.getCookie(request, HttpCookieOAuth2AuthorizationRequestRepository.REDIRECT_URI_PARAM_COOKIE_NAME)
+                .map(jakarta.servlet.http.Cookie::getValue)
+                .orElse(frontendUrl);
+
+        if (redirectBase == null || redirectBase.isBlank() || redirectBase.equals("https://cloudprint.website")) {
+            redirectBase = "https://www.cloudprint.website";
+        }
+        if (redirectBase.endsWith("/")) {
+            redirectBase = redirectBase.substring(0, redirectBase.length() - 1);
+        }
+
+        String targetUrl = redirectBase + "/login?error=" + URLEncoder.encode(errorMessage, StandardCharsets.UTF_8);
         getRedirectStrategy().sendRedirect(request, response, targetUrl);
     }
 }
