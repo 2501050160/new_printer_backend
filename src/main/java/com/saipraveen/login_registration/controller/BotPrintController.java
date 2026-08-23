@@ -100,21 +100,36 @@ public class BotPrintController {
 
             com.saipraveen.login_registration.entity.User user = userRepository.findByEmail(waEmail);
             if (user == null) {
+                try {
+                    user = userRepository.findByReferralCode("WA_" + cleanPhone);
+                } catch (Exception ignored) {}
+            }
+            if (user == null) {
                 user = new com.saipraveen.login_registration.entity.User();
                 user.setName(fullNameWithPhone);
                 user.setEmail(waEmail);
                 user.setPassword("WA_BOT_USER_NOPASS");
                 user.setWalletBalance(0.0);
                 user.setCollege(college);
-                user.setReferralCode("WA_" + cleanPhone);
+                user.setReferralCode("WA_" + cleanPhone + "_" + (System.currentTimeMillis() % 1000));
                 user.setBlocked(false);
-                user = userRepository.save(user);
+                try {
+                    user = userRepository.save(user);
+                } catch (Exception ex) {
+                    System.err.println("User creation fallback for " + waEmail + ": " + ex.getMessage());
+                    user = userRepository.findByEmail(waEmail);
+                    if (user == null) {
+                        user = userRepository.findAll().stream()
+                            .filter(u -> u.getEmail() != null && u.getEmail().toLowerCase().contains(cleanPhone.toLowerCase()))
+                            .findFirst().orElse(null);
+                    }
+                }
             } else {
                 if (Boolean.TRUE.equals(user.getBlocked())) {
                     return ResponseEntity.badRequest().body("⛔ Account Suspended: Your WhatsApp number has been blocked by the administrator. Please contact campus admin to unblock your account.");
                 }
                 boolean changed = false;
-                if (!user.getName().contains("+91 " + cleanPhone)) {
+                if (user.getName() == null || !user.getName().contains("+91 " + cleanPhone)) {
                     user.setName(fullNameWithPhone);
                     changed = true;
                 }
@@ -228,9 +243,10 @@ public class BotPrintController {
 
             return ResponseEntity.ok(response);
 
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
-            return ResponseEntity.internalServerError().body("Failed to process uploaded file: " + e.getMessage());
+            System.err.println("❌ Direct Upload Exception: " + e.getMessage());
+            return ResponseEntity.badRequest().body("Failed to process order: " + e.getMessage());
         }
     }
 
