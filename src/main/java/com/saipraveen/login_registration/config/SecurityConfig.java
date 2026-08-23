@@ -17,6 +17,9 @@ public class SecurityConfig {
     @Autowired
     private CustomOAuth2SuccessHandler oAuth2SuccessHandler;
 
+    @Autowired
+    private CustomOAuth2FailureHandler oAuth2FailureHandler;
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http)
             throws Exception {
@@ -29,6 +32,7 @@ public class SecurityConfig {
             .formLogin(form -> form.disable())
             .oauth2Login(oauth2 -> oauth2
                 .successHandler(oAuth2SuccessHandler)
+                .failureHandler(oAuth2FailureHandler)
             );
 
         return http.build();
