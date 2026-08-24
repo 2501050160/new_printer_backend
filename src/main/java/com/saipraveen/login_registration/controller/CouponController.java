@@ -137,14 +137,22 @@ public class CouponController {
         return ResponseEntity.ok(coupon);
     }
 
-    @PostMapping("/delete")
-    public ResponseEntity<?> deleteCoupon(@RequestParam Long id) {
-        if (couponRepository.existsById(id)) {
-            couponRepository.deleteById(id);
-            return ResponseEntity.ok("Coupon deleted successfully");
+    @org.springframework.transaction.annotation.Transactional
+    @RequestMapping(value = {"/delete", "/delete/{id}", "/{id}"}, method = {RequestMethod.DELETE, RequestMethod.POST})
+    public ResponseEntity<?> deleteCoupon(
+            @RequestParam(required = false) Long id,
+            @PathVariable(required = false) Long idPath
+    ) {
+        Long targetId = id != null ? id : idPath;
+        if (targetId == null) {
+            return ResponseEntity.badRequest().body("Coupon ID is required");
         }
-        return ResponseEntity.notFound().build();
+        if (couponRepository.existsById(targetId)) {
+            couponRepository.deleteById(targetId);
+        }
+        return ResponseEntity.ok("Coupon deleted successfully");
     }
+
 
     @Scheduled(fixedRate = 60000, initialDelay = 15000)
     @Transactional

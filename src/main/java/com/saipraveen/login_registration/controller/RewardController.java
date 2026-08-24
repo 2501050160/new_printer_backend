@@ -103,6 +103,7 @@ public class RewardController {
     }
 
     @PostMapping("/update-status")
+    @org.springframework.transaction.annotation.Transactional
     public ResponseEntity<?> updateStatus(@RequestParam Long id, @RequestParam Boolean active) {
         return rewardRepository.findById(id).map(rew -> {
             rew.setActive(active);
@@ -111,14 +112,46 @@ public class RewardController {
         }).orElse(ResponseEntity.notFound().build());
     }
 
-    @DeleteMapping("/delete")
-    public ResponseEntity<?> deleteReward(@RequestParam Long id) {
-        if (rewardRepository.existsById(id)) {
-            claimRepository.deleteByRewardId(id);
-            rewardRepository.deleteById(id);
-            return ResponseEntity.ok("Reward deleted successfully");
+    @org.springframework.transaction.annotation.Transactional
+    @RequestMapping(value = {"/delete", "/delete/{id}", "/{id}"}, method = {RequestMethod.DELETE, RequestMethod.POST})
+    public ResponseEntity<?> deleteReward(
+            @RequestParam(required = false) Long id,
+            @PathVariable(required = false) Long idPath,
+            @RequestBody(required = false) Map<String, Object> body
+    ) {
+        Long targetId = id;
+        if (targetId == null) {
+            targetId = idPath;
         }
-        return ResponseEntity.notFound().build();
+        if (targetId == null && body != null && body.containsKey("id")) {
+            try {
+                targetId = Long.valueOf(body.get("id").toString());
+            } catch (Exception ignored) {}
+        }
+
+        if (targetId == null) {
+            Map<String, Object> err = new HashMap<>();
+            err.put("success", false);
+            err.put("message", "Reward ID is required for deletion");
+            return ResponseEntity.badRequest().body(err);
+        }
+
+        try {
+            claimRepository.deleteByRewardId(targetId);
+            if (rewardRepository.existsById(targetId)) {
+                rewardRepository.deleteById(targetId);
+            }
+            Map<String, Object> ok = new HashMap<>();
+            ok.put("success", true);
+            ok.put("message", "Reward deleted successfully");
+            return ResponseEntity.ok(ok);
+        } catch (Exception ex) {
+            System.err.println("Error deleting reward " + targetId + ": " + ex.getMessage());
+            Map<String, Object> err = new HashMap<>();
+            err.put("success", false);
+            err.put("message", "Could not delete reward: " + ex.getMessage());
+            return ResponseEntity.status(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR).body(err);
+        }
     }
 
     @org.springframework.scheduling.annotation.Scheduled(fixedRate = 30000)
@@ -136,3 +169,4 @@ public class RewardController {
         }
     }
 }
+

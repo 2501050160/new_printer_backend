@@ -352,6 +352,90 @@ public ResponseEntity<?> cancelWindow(
         return ResponseEntity.ok(pdf);
     }
 
+    @Autowired
+    private com.saipraveen.login_registration.service.PrinterConfigService printerConfigService;
+
+    @Autowired
+    private com.saipraveen.login_registration.service.SystemSettingService systemSettingService;
+
+    @Autowired
+    private com.saipraveen.login_registration.repository.UserRepository userRepository;
+
+    @Autowired
+    private com.saipraveen.login_registration.service.PricingService pricingService;
+
+    @GetMapping("/checkout-context")
+    public ResponseEntity<?> getCheckoutContext(
+            @RequestParam String orderId,
+            @RequestParam(required = false) Long userId,
+            @RequestParam(required = false) String blockLocation
+    ) {
+        java.util.Map<String, Object> context = new java.util.HashMap<>();
+
+        // 1. Order details
+        PdfFile order = service.getOrder(orderId);
+        if (order == null) {
+            return ResponseEntity.notFound().build();
+        }
+        context.put("order", order);
+
+        String effectiveBlock = (blockLocation != null && !blockLocation.isEmpty())
+                ? blockLocation
+                : (order.getBlockLocation() != null ? order.getBlockLocation() : "C Block");
+
+        // 2. Paper level for block
+        int paperCount = 500;
+        try {
+            paperCount = printerConfigService.getPaperCount(effectiveBlock);
+        } catch (Exception ignored) {}
+        context.put("paperCount", paperCount);
+
+        // 3. Printer availability & Maintenance check
+        try {
+            com.saipraveen.login_registration.service.PrinterConfigService.AvailabilityResult avail =
+                    printerConfigService.checkPrinterAvailability(effectiveBlock, order.getPrintType() != null ? order.getPrintType() : "BW");
+            context.put("printerAvailable", avail.isAvailable());
+            context.put("maintenanceMessage", avail.getMessage());
+        } catch (Exception e) {
+            context.put("printerAvailable", true);
+            context.put("maintenanceMessage", "");
+        }
+
+        // 4. Wallet balance
+        double walletBalance = 0.0;
+        if (userId != null) {
+            try {
+                com.saipraveen.login_registration.entity.User u = userRepository.findById(userId).orElse(null);
+                if (u != null && u.getWalletBalance() != null) {
+                    walletBalance = u.getWalletBalance();
+                }
+            } catch (Exception ignored) {}
+        } else if (order.getUserId() != null) {
+            try {
+                com.saipraveen.login_registration.entity.User u = userRepository.findById(order.getUserId()).orElse(null);
+                if (u != null && u.getWalletBalance() != null) {
+                    walletBalance = u.getWalletBalance();
+                }
+            } catch (Exception ignored) {}
+        }
+        context.put("walletBalance", walletBalance);
+
+        // 5. System settings
+        try {
+            context.put("systemSettings", systemSettingService.getSettings());
+        } catch (Exception ignored) {}
+
+        // 6. Pricing rate
+        try {
+            Double rate = pricingService.getPrice(order.getPrintType() != null ? order.getPrintType() : "BW", effectiveBlock);
+            context.put("pricingRate", rate != null ? rate : 2.0);
+        } catch (Exception ignored) {
+            context.put("pricingRate", 2.0);
+        }
+
+        return ResponseEntity.ok(context);
+    }
+
     @GetMapping("/referrals/stats")
     public ResponseEntity<?> getReferralStats(@RequestParam Long userId) {
         return ResponseEntity.ok(service.getReferralStats(userId));

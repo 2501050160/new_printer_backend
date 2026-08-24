@@ -194,17 +194,19 @@ public class AlertNotificationService {
         );
 
         if (mailSender != null && mailUsername != null && !mailUsername.trim().isEmpty()) {
-            try {
-                SimpleMailMessage message = new SimpleMailMessage();
-                message.setFrom(mailUsername);
-                message.setTo(ADMIN_EMAIL);
-                message.setSubject(subject);
-                message.setText(body);
-                mailSender.send(message);
-                System.out.println("✅ Email alert sent successfully to " + ADMIN_EMAIL);
-            } catch (Exception e) {
-                System.err.println("Failed to send alert email: " + e.getMessage());
-            }
+            java.util.concurrent.CompletableFuture.runAsync(() -> {
+                try {
+                    SimpleMailMessage message = new SimpleMailMessage();
+                    message.setFrom(mailUsername);
+                    message.setTo(ADMIN_EMAIL);
+                    message.setSubject(subject);
+                    message.setText(body);
+                    mailSender.send(message);
+                    System.out.println("✅ Email alert sent successfully to " + ADMIN_EMAIL);
+                } catch (Exception e) {
+                    System.err.println("Notice: Failed to send alert email: " + e.getMessage());
+                }
+            });
         } else {
             System.out.println("ℹ️ SMTP Sender not configured. Alert logged to console.");
         }

@@ -8,6 +8,7 @@ import java.util.TimeZone;
 
 @SpringBootApplication
 @EnableScheduling
+@org.springframework.cache.annotation.EnableCaching
 public class LoginRegistrationApplication {
 
 	@PostConstruct

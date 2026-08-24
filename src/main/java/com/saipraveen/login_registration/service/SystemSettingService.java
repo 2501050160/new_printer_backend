@@ -50,4 +50,18 @@ public class SystemSettingService {
             return defaultValue;
         }
     }
+
+    public java.util.Map<String, Object> getSettings() {
+        java.util.Map<String, Object> map = new java.util.HashMap<>();
+        map.put("referralEnabled", getSettingBool("referral_enabled", true));
+        map.put("referrerAmount", getSettingDouble("referral_referrer_amount", 10.0));
+        map.put("refereeAmount", getSettingDouble("referral_referee_amount", 5.0));
+        map.put("popupEnabled", getSettingBool("referral_popup_enabled", true));
+        map.put("popupMessage", getSetting("referral_popup_message", ""));
+        map.put("adEnabled", getSettingBool("ad_enabled", true));
+        map.put("adText", getSetting("ad_text", ""));
+        map.put("testerModeEnabled", getSettingBool("tester_mode_enabled", false));
+        map.put("testerUsernames", getSetting("tester_usernames", ""));
+        return map;
+    }
 }
