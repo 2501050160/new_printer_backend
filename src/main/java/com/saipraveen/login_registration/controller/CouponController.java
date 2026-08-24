@@ -97,12 +97,24 @@ public class CouponController {
         }
         Coupon coupon = list.get(0);
         if (Boolean.FALSE.equals(coupon.getActive())) {
-            return ResponseEntity.badRequest().body("Coupon is disabled");
+            return ResponseEntity.badRequest().body("This coupon is inactive or disabled");
+        }
+        if (coupon.getMaxUses() != null && coupon.getUsedCount() != null && coupon.getUsedCount() >= coupon.getMaxUses()) {
+            return ResponseEntity.badRequest().body("This coupon code has already reached its maximum usage limit (already used)");
+        }
+        if (coupon.getExpiryDate() != null && !coupon.getExpiryDate().trim().isEmpty()) {
+            try {
+                LocalDate date = LocalDate.parse(coupon.getExpiryDate().trim());
+                if (date.isBefore(LocalDate.now())) {
+                    return ResponseEntity.badRequest().body("This coupon code has expired");
+                }
+            } catch (Exception ignored) {}
         }
         return ResponseEntity.ok(coupon);
     }
 
     @PostMapping("/use")
+    @Transactional
     public ResponseEntity<?> useCoupon(@RequestParam String couponCode) {
         if (couponCode == null || couponCode.trim().isEmpty()) {
             return ResponseEntity.badRequest().body("Coupon code is required");
@@ -113,6 +125,9 @@ public class CouponController {
             return ResponseEntity.badRequest().body("Coupon not found");
         }
         Coupon coupon = list.get(0);
+        if (Boolean.FALSE.equals(coupon.getActive()) || (coupon.getMaxUses() != null && coupon.getUsedCount() != null && coupon.getUsedCount() >= coupon.getMaxUses())) {
+            return ResponseEntity.badRequest().body("This coupon has already been redeemed or used");
+        }
         int used = coupon.getUsedCount() != null ? coupon.getUsedCount() : 0;
         coupon.setUsedCount(used + 1);
         if (coupon.getMaxUses() != null && coupon.getUsedCount() >= coupon.getMaxUses()) {

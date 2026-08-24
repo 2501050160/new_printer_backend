@@ -51,6 +51,9 @@ public class BotPrintController {
     @Autowired
     private com.saipraveen.login_registration.service.VoucherService voucherService;
 
+    @Autowired
+    private com.saipraveen.login_registration.repository.CouponRepository couponRepository;
+
     @org.springframework.beans.factory.annotation.Value("${app.frontend.url:https://cloudprint.website}")
     private String frontendUrl;
 
@@ -72,7 +75,8 @@ public class BotPrintController {
             @RequestParam(value = "printType", defaultValue = "BW") String printType,
             @RequestParam(value = "selectedPages", defaultValue = "ALL") String selectedPages,
             @RequestParam(value = "doubleSided", defaultValue = "false") Boolean doubleSided,
-            @RequestParam(value = "copies", defaultValue = "1") Integer copies
+            @RequestParam(value = "copies", defaultValue = "1") Integer copies,
+            @RequestParam(value = "couponCode", required = false) String couponCode
     ) {
         try {
             if (file == null || file.isEmpty()) {
@@ -174,30 +178,67 @@ public class BotPrintController {
             }
             double estimatedTotal = updated.getPrice() != null ? updated.getPrice() : (pages * rate * (copies != null ? copies : 1));
 
+            // Apply coupon discount if provided
+            double couponDiscount = 0.0;
+            if (couponCode != null && !couponCode.trim().isEmpty()) {
+                String cleanCode = couponCode.trim().toUpperCase();
+                java.util.List<com.saipraveen.login_registration.entity.Coupon> coupons = couponRepository.findByCouponCodeIgnoreCase(cleanCode);
+                if (coupons != null && !coupons.isEmpty()) {
+                    com.saipraveen.login_registration.entity.Coupon cp = coupons.get(0);
+                    if (Boolean.TRUE.equals(cp.getActive()) && (cp.getMaxUses() == null || cp.getUsedCount() == null || cp.getUsedCount() < cp.getMaxUses())) {
+                        if (cp.getDiscountAmount() != null && cp.getDiscountAmount() > 0) {
+                            couponDiscount = cp.getDiscountAmount();
+                        } else if (cp.getDiscountPercentage() != null && cp.getDiscountPercentage() > 0) {
+                            couponDiscount = (estimatedTotal * cp.getDiscountPercentage()) / 100.0;
+                        }
+                        // Single-use coupon decrement
+                        int used = cp.getUsedCount() != null ? cp.getUsedCount() : 0;
+                        cp.setUsedCount(used + 1);
+                        if (cp.getMaxUses() != null && (used + 1) >= cp.getMaxUses()) {
+                            cp.setActive(false);
+                        }
+                        couponRepository.save(cp);
+                    }
+                }
+            }
+
+            double remainingAfterCoupon = Math.max(0.0, estimatedTotal - couponDiscount);
+            if (couponDiscount > 0) {
+                updated.setOriginalPrice(estimatedTotal);
+                updated.setDiscountAmount(couponDiscount);
+                updated.setPrice(remainingAfterCoupon);
+                updated = pdfFileRepository.save(updated);
+            }
+
             // Handle automatic full or partial wallet deduction
             double userBal = user.getWalletBalance() != null ? user.getWalletBalance() : 0.0;
             boolean paidViaWallet = false;
             boolean partialWallet = false;
             double walletDeducted = 0.0;
-            double finalPriceToPay = estimatedTotal;
+            double finalPriceToPay = remainingAfterCoupon;
 
-            if (userBal >= estimatedTotal && estimatedTotal > 0) {
+            if (remainingAfterCoupon <= 0.0 && couponDiscount > 0) {
+                // 100% covered by coupon!
+                pdfFileService.markAsPaid(updated.getOrderId(), "COUPON_PAYMENT");
+                paidViaWallet = true;
+                finalPriceToPay = 0.0;
+            } else if (userBal >= remainingAfterCoupon && remainingAfterCoupon > 0) {
                 // Full wallet payment
-                user.setWalletBalance(userBal - estimatedTotal);
+                user.setWalletBalance(userBal - remainingAfterCoupon);
                 userRepository.save(user);
                 pdfFileService.markAsPaid(updated.getOrderId(), "WALLET_PAYMENT");
                 paidViaWallet = true;
                 finalPriceToPay = 0.0;
-                walletDeducted = estimatedTotal;
-            } else if (userBal > 0 && userBal < estimatedTotal) {
+                walletDeducted = remainingAfterCoupon;
+            } else if (userBal > 0 && userBal < remainingAfterCoupon) {
                 // Partial wallet payment
                 walletDeducted = userBal;
                 user.setWalletBalance(0.0);
                 userRepository.save(user);
                 
-                finalPriceToPay = estimatedTotal - walletDeducted;
+                finalPriceToPay = remainingAfterCoupon - walletDeducted;
                 updated.setOriginalPrice(estimatedTotal);
-                updated.setDiscountAmount(walletDeducted);
+                updated.setDiscountAmount(couponDiscount + walletDeducted);
                 updated.setPrice(finalPriceToPay);
                 updated = pdfFileRepository.save(updated);
                 partialWallet = true;

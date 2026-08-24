@@ -293,11 +293,16 @@ public class AdminController {
                 String bWebVal = systemSettingService.getSetting("otp_required_web_" + blkName, null);
                 String bWaVal = systemSettingService.getSetting("otp_required_whatsapp_" + blkName, null);
                 
-                boolean webOtp = (bWebVal != null && !bWebVal.trim().isEmpty()) ? Boolean.parseBoolean(bWebVal) : defaultWeb;
-                boolean waOtp = (bWaVal != null && !bWaVal.trim().isEmpty()) ? Boolean.parseBoolean(bWaVal) : defaultWa;
+                String webSetting = (bWebVal == null || bWebVal.trim().isEmpty() || "INHERIT".equalsIgnoreCase(bWebVal)) ? "INHERIT" : (Boolean.parseBoolean(bWebVal) ? "REQUIRED" : "BYPASS");
+                String waSetting = (bWaVal == null || bWaVal.trim().isEmpty() || "INHERIT".equalsIgnoreCase(bWaVal)) ? "INHERIT" : (Boolean.parseBoolean(bWaVal) ? "REQUIRED" : "BYPASS");
 
-                bMap.put("webOtp", webOtp);
-                bMap.put("whatsappOtp", waOtp);
+                boolean effectiveWeb = "INHERIT".equals(webSetting) ? defaultWeb : "REQUIRED".equals(webSetting);
+                boolean effectiveWa = "INHERIT".equals(waSetting) ? defaultWa : "REQUIRED".equals(waSetting);
+
+                bMap.put("webOtp", webSetting);
+                bMap.put("whatsappOtp", waSetting);
+                bMap.put("effectiveWebOtp", effectiveWeb);
+                bMap.put("effectiveWhatsappOtp", effectiveWa);
                 blockRules.put(blkName, bMap);
 
                 // College overrides
@@ -305,10 +310,12 @@ public class AdminController {
                     java.util.Map<String, Object> cMap = new java.util.HashMap<>();
                     String cWebVal = systemSettingService.getSetting("otp_required_web_" + colName, null);
                     String cWaVal = systemSettingService.getSetting("otp_required_whatsapp_" + colName, null);
-                    boolean cWebOtp = (cWebVal != null && !cWebVal.trim().isEmpty()) ? Boolean.parseBoolean(cWebVal) : defaultWeb;
-                    boolean cWaOtp = (cWaVal != null && !cWaVal.trim().isEmpty()) ? Boolean.parseBoolean(cWaVal) : defaultWa;
-                    cMap.put("webOtp", cWebOtp);
-                    cMap.put("whatsappOtp", cWaOtp);
+                    String cWebSetting = (cWebVal == null || cWebVal.trim().isEmpty() || "INHERIT".equalsIgnoreCase(cWebVal)) ? "INHERIT" : (Boolean.parseBoolean(cWebVal) ? "REQUIRED" : "BYPASS");
+                    String cWaSetting = (cWaVal == null || cWaVal.trim().isEmpty() || "INHERIT".equalsIgnoreCase(cWaVal)) ? "INHERIT" : (Boolean.parseBoolean(cWaVal) ? "REQUIRED" : "BYPASS");
+                    cMap.put("webOtp", cWebSetting);
+                    cMap.put("whatsappOtp", cWaSetting);
+                    cMap.put("effectiveWebOtp", "INHERIT".equals(cWebSetting) ? defaultWeb : "REQUIRED".equals(cWebSetting));
+                    cMap.put("effectiveWhatsappOtp", "INHERIT".equals(cWaSetting) ? defaultWa : "REQUIRED".equals(cWaSetting));
                     collegeRules.put(colName, cMap);
                 }
             }
@@ -336,13 +343,19 @@ public class AdminController {
                     java.util.Map<?, ?> valMap = (java.util.Map<?, ?>) entry.getValue();
                     if (valMap.containsKey("webOtp")) {
                         Object v = valMap.get("webOtp");
-                        if (v == null) systemSettingService.setSetting("otp_required_web_" + college, "");
-                        else systemSettingService.setSetting("otp_required_web_" + college, String.valueOf(v));
+                        if (v == null || "INHERIT".equalsIgnoreCase(String.valueOf(v)) || "".equals(String.valueOf(v))) {
+                            systemSettingService.setSetting("otp_required_web_" + college, "");
+                        } else {
+                            systemSettingService.setSetting("otp_required_web_" + college, "REQUIRED".equalsIgnoreCase(String.valueOf(v)) || "true".equalsIgnoreCase(String.valueOf(v)) ? "true" : "false");
+                        }
                     }
                     if (valMap.containsKey("whatsappOtp")) {
                         Object v = valMap.get("whatsappOtp");
-                        if (v == null) systemSettingService.setSetting("otp_required_whatsapp_" + college, "");
-                        else systemSettingService.setSetting("otp_required_whatsapp_" + college, String.valueOf(v));
+                        if (v == null || "INHERIT".equalsIgnoreCase(String.valueOf(v)) || "".equals(String.valueOf(v))) {
+                            systemSettingService.setSetting("otp_required_whatsapp_" + college, "");
+                        } else {
+                            systemSettingService.setSetting("otp_required_whatsapp_" + college, "REQUIRED".equalsIgnoreCase(String.valueOf(v)) || "true".equalsIgnoreCase(String.valueOf(v)) ? "true" : "false");
+                        }
                     }
                 }
             }
@@ -356,13 +369,19 @@ public class AdminController {
                     java.util.Map<?, ?> valMap = (java.util.Map<?, ?>) entry.getValue();
                     if (valMap.containsKey("webOtp")) {
                         Object v = valMap.get("webOtp");
-                        if (v == null) systemSettingService.setSetting("otp_required_web_" + block, "");
-                        else systemSettingService.setSetting("otp_required_web_" + block, String.valueOf(v));
+                        if (v == null || "INHERIT".equalsIgnoreCase(String.valueOf(v)) || "".equals(String.valueOf(v))) {
+                            systemSettingService.setSetting("otp_required_web_" + block, "");
+                        } else {
+                            systemSettingService.setSetting("otp_required_web_" + block, "REQUIRED".equalsIgnoreCase(String.valueOf(v)) || "true".equalsIgnoreCase(String.valueOf(v)) ? "true" : "false");
+                        }
                     }
                     if (valMap.containsKey("whatsappOtp")) {
                         Object v = valMap.get("whatsappOtp");
-                        if (v == null) systemSettingService.setSetting("otp_required_whatsapp_" + block, "");
-                        else systemSettingService.setSetting("otp_required_whatsapp_" + block, String.valueOf(v));
+                        if (v == null || "INHERIT".equalsIgnoreCase(String.valueOf(v)) || "".equals(String.valueOf(v))) {
+                            systemSettingService.setSetting("otp_required_whatsapp_" + block, "");
+                        } else {
+                            systemSettingService.setSetting("otp_required_whatsapp_" + block, "REQUIRED".equalsIgnoreCase(String.valueOf(v)) || "true".equalsIgnoreCase(String.valueOf(v)) ? "true" : "false");
+                        }
                     }
                 }
             }

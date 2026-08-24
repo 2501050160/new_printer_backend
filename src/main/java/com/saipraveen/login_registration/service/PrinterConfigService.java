@@ -15,6 +15,9 @@ public class PrinterConfigService {
     @Autowired
     private PrinterConfigRepository repository;
 
+    @Autowired(required = false)
+    private AlertNotificationService alertService;
+
     @Transactional
     public PrinterConfig savePrinter(PrinterConfig printer) {
         PrinterConfig target = null;
@@ -120,6 +123,34 @@ public class PrinterConfigService {
             int newCount = Math.max(0, current - pages);
             printer.setPaperCount(newCount);
             repository.save(printer);
+
+            // Notify admin immediately when paper runs critically low or completely out
+            if (alertService != null) {
+                try {
+                    String pName = printer.getPrinterName() != null ? printer.getPrinterName() : blockLocation + " Printer";
+                    if (newCount <= 0) {
+                        alertService.triggerPrinterAlert(
+                            blockLocation,
+                            pName,
+                            "OUT_OF_PAPER",
+                            "🚨 Paper tray is completely empty (0 sheets remaining) at " + blockLocation + "! Refill needed immediately.",
+                            null,
+                            null
+                        );
+                    } else if (newCount <= 50) {
+                        alertService.triggerPrinterAlert(
+                            blockLocation,
+                            pName,
+                            "LOW_PAPER",
+                            "⚠️ Low paper warning: Only " + newCount + " sheets remaining at " + blockLocation + ". Refill soon.",
+                            null,
+                            null
+                        );
+                    }
+                } catch (Exception e) {
+                    System.err.println("Notice: Could not trigger paper alert: " + e.getMessage());
+                }
+            }
         }
     }
 

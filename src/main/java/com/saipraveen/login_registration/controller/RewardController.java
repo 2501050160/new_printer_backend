@@ -28,6 +28,12 @@ public class RewardController {
     @Autowired
     private UserService userService;
 
+    @Autowired
+    private com.saipraveen.login_registration.repository.UserRepository userRepository;
+
+    @Autowired
+    private com.saipraveen.login_registration.service.VoucherService voucherService;
+
     @GetMapping("/all")
     public ResponseEntity<List<Reward>> getAllRewards() {
         return ResponseEntity.ok(rewardRepository.findAll());
@@ -79,55 +85,21 @@ public class RewardController {
             return ResponseEntity.badRequest().body(response);
         }
 
-        String normalizedCode = rawCode.trim().toUpperCase();
-        Reward reward = rewardRepository.findByClaimCode(normalizedCode);
-        if (reward == null) {
-            // Also check Coupon table for flat refund or bonus coupons
-            try {
-                com.saipraveen.login_registration.repository.CouponRepository couponRepo = 
-                    org.springframework.web.context.ContextLoader.getCurrentWebApplicationContext() != null ? 
-                    org.springframework.web.context.ContextLoader.getCurrentWebApplicationContext().getBean(com.saipraveen.login_registration.repository.CouponRepository.class) : null;
-            } catch (Exception ignored) {}
+        User user = userRepository.findById(userId).orElse(null);
+        if (user == null) {
             response.put("success", false);
-            response.put("message", "Invalid reward claim code");
+            response.put("message", "User not found");
             return ResponseEntity.badRequest().body(response);
         }
 
-        if (!reward.getActive()) {
-            response.put("success", false);
-            response.put("message", "This reward is currently inactive");
-            return ResponseEntity.badRequest().body(response);
+        Map<String, Object> result = voucherService.redeemVoucherOrCoupon(user, rawCode);
+        if (Boolean.TRUE.equals(result.get("success"))) {
+            result.put("amount", result.get("creditedAmount"));
+            result.put("walletBalance", result.get("newBalance"));
+            return ResponseEntity.ok(result);
+        } else {
+            return ResponseEntity.badRequest().body(result);
         }
-
-        if (reward.getClaimedCount() >= reward.getMaxClaims()) {
-            response.put("success", false);
-            response.put("message", "This reward claim limit has been reached");
-            return ResponseEntity.badRequest().body(response);
-        }
-
-        boolean alreadyClaimed = claimRepository.existsByUserIdAndRewardId(userId, reward.getId());
-        if (alreadyClaimed) {
-            response.put("success", false);
-            response.put("message", "You have already claimed this reward");
-            return ResponseEntity.badRequest().body(response);
-        }
-
-        // Process claim (credit wallet balance)
-        User updatedUser = userService.creditWallet(userId, reward.getRewardAmount());
-        
-        // Record claim
-        claimRepository.save(new UserRewardClaim(userId, reward.getId(), LocalDateTime.now()));
-        
-        // Increment claimed count
-        reward.setClaimedCount(reward.getClaimedCount() + 1);
-        rewardRepository.save(reward);
-
-        response.put("success", true);
-        response.put("message", "Reward claimed successfully! Rs. " + reward.getRewardAmount() + " added to your wallet.");
-        response.put("amount", reward.getRewardAmount());
-        response.put("newBalance", updatedUser.getWalletBalance());
-        response.put("walletBalance", updatedUser.getWalletBalance());
-        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/update-status")
