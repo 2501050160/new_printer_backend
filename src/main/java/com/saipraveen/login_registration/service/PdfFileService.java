@@ -1561,4 +1561,18 @@ private void addPageRange(
         }
         return result;
     }
+
+    public PdfFile getOrder(String orderId) {
+        if (orderId == null || orderId.trim().isEmpty()) return null;
+        PdfFile pdf = repository.findByOrderId(orderId.trim());
+        if (pdf == null) {
+            try {
+                String digits = orderId.trim().replaceAll("[^0-9]", "");
+                if (!digits.isEmpty()) {
+                    pdf = repository.findById(Long.parseLong(digits)).orElse(null);
+                }
+            } catch (Exception ignored) {}
+        }
+        return pdf;
+    }
 }

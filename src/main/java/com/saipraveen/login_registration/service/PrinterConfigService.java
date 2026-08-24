@@ -170,6 +170,11 @@ public class PrinterConfigService {
         }
     }
 
+    public int getPaperCount(String blockLocation) {
+        PrinterConfig printer = getPrinterByBlock(blockLocation);
+        return (printer != null && printer.getPaperCount() != null) ? printer.getPaperCount() : 500;
+    }
+
     public static class AvailabilityResult {
         private final boolean available;
         private final String message;

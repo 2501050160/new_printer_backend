@@ -304,9 +304,6 @@ public class BotPrintController {
         }
     }
 
-    @Autowired
-    private com.saipraveen.login_registration.repository.CouponRepository couponRepository;
-
     @org.springframework.web.bind.annotation.GetMapping("/user-balance")
     public ResponseEntity<?> getUserBalance(@RequestParam String phoneNumber) {
         String cleanPhone = sanitizePhoneNumber(phoneNumber);
