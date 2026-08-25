@@ -54,6 +54,9 @@ public class BotPrintController {
     @Autowired
     private com.saipraveen.login_registration.repository.CouponRepository couponRepository;
 
+    @Autowired(required = false)
+    private com.saipraveen.login_registration.service.AlertNotificationService alertNotificationService;
+
     @org.springframework.beans.factory.annotation.Value("${app.frontend.url:https://cloudprint.website}")
     private String frontendUrl;
 
@@ -172,6 +175,25 @@ public class BotPrintController {
 
             // Calculate details from updated PDF
             int pages = updated.getTotalPages() != null ? updated.getTotalPages() : 1;
+            int copyCount = copies != null ? copies : 1;
+            boolean isDuplex = Boolean.TRUE.equals(doubleSided);
+            int sheetsNeeded = (int) Math.ceil((double) pages / (isDuplex ? 2.0 : 1.0)) * copyCount;
+
+            int availablePaper = printerConfigService.getPaperCount(blockLocation);
+            if (sheetsNeeded > availablePaper) {
+                if (alertNotificationService != null) {
+                    alertNotificationService.triggerPrinterAlert(
+                        blockLocation,
+                        blockLocation + " Printer",
+                        availablePaper <= 0 ? "OUT_OF_PAPER" : "LOW_PAPER",
+                        "⚠️ Kiosk " + blockLocation + " has only " + availablePaper + " sheets remaining, but an incoming order requires " + sheetsNeeded + " sheets (" + copyCount + " copies)! Refill immediately.",
+                        updated.getOrderId(),
+                        cleanPhone
+                    );
+                }
+                return ResponseEntity.badRequest().body("⚠️ Insufficient Paper in Kiosk (" + blockLocation + "): This order requires " + sheetsNeeded + " sheets, but only " + availablePaper + " sheets are currently available in the tray. Please reduce copies or choose another kiosk.");
+            }
+
             Double rate = pricingService.getPrice(printType, blockLocation);
             if (rate == null || rate == 0.0) {
                 rate = "COLOR".equalsIgnoreCase(printType) ? 5.0 : 2.0;
