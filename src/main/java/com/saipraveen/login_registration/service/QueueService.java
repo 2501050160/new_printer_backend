@@ -364,12 +364,10 @@ public class QueueService {
             return result;
         }
 
-        Double refundAmount =
-                pdf.getPrice() == null
-                        ? 0.0
-                        : pdf.getPrice();
+        boolean isPaid = "PAID".equalsIgnoreCase(pdf.getPaymentStatus());
+        Double refundAmount = (isPaid && pdf.getPrice() != null) ? pdf.getPrice() : 0.0;
 
-        if (pdf.getUserId() != null && refundAmount > 0) {
+        if (isPaid && pdf.getUserId() != null && refundAmount > 0) {
             userService.creditWallet(
                     pdf.getUserId(),
                     refundAmount
@@ -377,14 +375,14 @@ public class QueueService {
         }
 
         pdf.setStatus("CANCELLED");
-        pdf.setPaymentStatus("REFUNDED");
+        pdf.setPaymentStatus(isPaid ? "REFUNDED" : "CANCELLED_UNPAID");
         pdf.setFinishedAt(LocalDateTime.now());
         pdf.setPdfData(null);
 
         repository.save(pdf);
 
         result.put("success", true);
-        result.put("message", "Order cancelled. Amount credited to wallet.");
+        result.put("message", isPaid ? "Order cancelled. Amount credited to wallet." : "Unpaid order cancelled. No charges applied.");
         result.put("refundAmount", refundAmount);
 
         return result;
@@ -473,13 +471,10 @@ public class QueueService {
     }
 
     private void refundAndCancel(PdfFile pdf, String reason) {
+        boolean isPaid = "PAID".equalsIgnoreCase(pdf.getPaymentStatus());
+        Double refundAmount = (isPaid && pdf.getPrice() != null) ? pdf.getPrice() : 0.0;
 
-        Double refundAmount =
-                pdf.getPrice() == null
-                        ? 0.0
-                        : pdf.getPrice();
-
-        if (pdf.getUserId() != null && refundAmount > 0) {
+        if (isPaid && pdf.getUserId() != null && refundAmount > 0) {
             try {
                 if (userService.userExists(pdf.getUserId())) {
                     userService.creditWallet(
@@ -495,7 +490,7 @@ public class QueueService {
         }
 
         pdf.setStatus("CANCELLED");
-        pdf.setPaymentStatus("REFUNDED");
+        pdf.setPaymentStatus(isPaid ? "REFUNDED" : "CANCELLED_UNPAID");
         pdf.setFinishedAt(LocalDateTime.now());
         pdf.setPdfData(null);
 

@@ -81,8 +81,16 @@ public class SseService {
      * Broadcast queue modification event
      */
     public void broadcastQueueEvent(String message) {
+        broadcastQueueEvent(message, "");
+    }
+
+    /**
+     * Broadcast queue modification event with target block location
+     */
+    public void broadcastQueueEvent(String message, String blockLocation) {
         broadcast("QUEUE_UPDATED", Map.of(
                 "message", message != null ? message : "Queue Modified",
+                "blockLocation", blockLocation != null ? blockLocation : "",
                 "timestamp", System.currentTimeMillis()
         ));
     }

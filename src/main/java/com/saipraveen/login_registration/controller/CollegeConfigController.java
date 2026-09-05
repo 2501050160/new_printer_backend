@@ -22,16 +22,32 @@ public class CollegeConfigController {
         return collegeConfigRepository.findAll();
     }
 
-    @PostMapping
+    @PostMapping({"", "/update"})
     public ResponseEntity<CollegeConfig> saveOrUpdateConfig(@RequestBody CollegeConfig request) {
-        if (request.getCollegeName() == null || request.getCollegeName().trim().isEmpty()) {
+        String cName = request.getCollegeName();
+        if (cName == null || cName.trim().isEmpty()) {
+            cName = request.getCollege();
+        }
+        if (cName == null || cName.trim().isEmpty()) {
             return ResponseEntity.badRequest().build();
         }
+        cName = cName.trim();
+        request.setCollegeName(cName);
 
-        CollegeConfig existing = collegeConfigRepository.findByCollegeName(request.getCollegeName());
+        CollegeConfig existing = collegeConfigRepository.findByCollegeName(cName);
         if (existing != null) {
-            existing.setRazorpayKeyId(request.getRazorpayKeyId());
-            existing.setRazorpayKeySecret(request.getRazorpayKeySecret());
+            if (request.getRazorpayKeyId() != null) {
+                existing.setRazorpayKeyId(request.getRazorpayKeyId());
+            }
+            if (request.getRazorpayKeySecret() != null) {
+                existing.setRazorpayKeySecret(request.getRazorpayKeySecret());
+            }
+            if (request.getWhatsappBotPhone() != null) {
+                existing.setWhatsappBotPhone(request.getWhatsappBotPhone());
+            }
+            if (request.getDedicatedBotEnabled() != null) {
+                existing.setDedicatedBotEnabled(request.getDedicatedBotEnabled());
+            }
             return ResponseEntity.ok(collegeConfigRepository.save(existing));
         }
 
@@ -42,5 +58,30 @@ public class CollegeConfigController {
     public ResponseEntity<?> deleteConfig(@PathVariable Long id) {
         collegeConfigRepository.deleteById(id);
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/download-bot-config/{college}")
+    public ResponseEntity<byte[]> downloadBotConfig(@PathVariable String college) {
+        String col = (college == null || college.trim().isEmpty() || college.equalsIgnoreCase("unified") || college.equalsIgnoreCase("all"))
+            ? ""
+            : college.trim();
+
+        String botName = col.isEmpty() ? "Unified Cloud Print Bot" : (col + " Dedicated WhatsApp Bot");
+        String jsonContent = String.format(
+            "{\n" +
+            "  \"targetCollege\": \"%s\",\n" +
+            "  \"backendUrl\": \"https://printer-backend-kgzp.onrender.com\",\n" +
+            "  \"frontendUrl\": \"https://cloudprint.website\",\n" +
+            "  \"botName\": \"%s\"\n" +
+            "}\n",
+            col,
+            botName
+        );
+
+        byte[] bytes = jsonContent.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        return ResponseEntity.ok()
+            .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"bot_config.json\"")
+            .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+            .body(bytes);
     }
 }

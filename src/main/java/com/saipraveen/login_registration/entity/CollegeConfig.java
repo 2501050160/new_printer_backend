@@ -19,12 +19,26 @@ public class CollegeConfig {
     @Column(nullable = false)
     private String razorpayKeySecret;
 
+    @Column(nullable = true)
+    private String whatsappBotPhone;
+
+    @Column(nullable = true)
+    private Boolean dedicatedBotEnabled = false;
+
     public CollegeConfig() {}
 
     public CollegeConfig(String collegeName, String razorpayKeyId, String razorpayKeySecret) {
         this.collegeName = collegeName;
         this.razorpayKeyId = razorpayKeyId;
         this.razorpayKeySecret = razorpayKeySecret;
+    }
+
+    public CollegeConfig(String collegeName, String razorpayKeyId, String razorpayKeySecret, String whatsappBotPhone, Boolean dedicatedBotEnabled) {
+        this.collegeName = collegeName;
+        this.razorpayKeyId = razorpayKeyId;
+        this.razorpayKeySecret = razorpayKeySecret;
+        this.whatsappBotPhone = whatsappBotPhone;
+        this.dedicatedBotEnabled = dedicatedBotEnabled;
     }
 
     public Long getId() {
@@ -43,6 +57,15 @@ public class CollegeConfig {
         this.collegeName = collegeName;
     }
 
+    // Alias for JSON deserialization if payload uses "college" instead of "collegeName"
+    public String getCollege() {
+        return collegeName;
+    }
+
+    public void setCollege(String college) {
+        this.collegeName = college;
+    }
+
     public String getRazorpayKeyId() {
         return razorpayKeyId;
     }
@@ -57,5 +80,21 @@ public class CollegeConfig {
 
     public void setRazorpayKeySecret(String razorpayKeySecret) {
         this.razorpayKeySecret = razorpayKeySecret;
+    }
+
+    public String getWhatsappBotPhone() {
+        return whatsappBotPhone;
+    }
+
+    public void setWhatsappBotPhone(String whatsappBotPhone) {
+        this.whatsappBotPhone = whatsappBotPhone;
+    }
+
+    public Boolean getDedicatedBotEnabled() {
+        return dedicatedBotEnabled != null && dedicatedBotEnabled;
+    }
+
+    public void setDedicatedBotEnabled(Boolean dedicatedBotEnabled) {
+        this.dedicatedBotEnabled = dedicatedBotEnabled;
     }
 }

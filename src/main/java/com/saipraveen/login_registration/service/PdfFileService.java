@@ -1338,6 +1338,17 @@ private void addPageRange(
     public void deleteOrdersByOrderIds(List<String> orderIds) {
         if (orderIds != null && !orderIds.isEmpty()) {
             repository.deleteByOrderIdIn(orderIds);
+            List<Long> numericIds = new java.util.ArrayList<>();
+            for (String s : orderIds) {
+                if (s != null && !s.trim().isEmpty()) {
+                    try {
+                        numericIds.add(Long.parseLong(s.trim()));
+                    } catch (NumberFormatException ignored) {}
+                }
+            }
+            if (!numericIds.isEmpty()) {
+                repository.deleteByIdIn(numericIds);
+            }
         }
     }
 

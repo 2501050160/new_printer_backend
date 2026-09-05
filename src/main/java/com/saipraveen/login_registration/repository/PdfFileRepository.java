@@ -30,7 +30,7 @@ public interface PdfFileRepository
 
     @Modifying
     @org.springframework.transaction.annotation.Transactional
-    @Query("DELETE FROM PdfFile p WHERE p.blockLocation IN (SELECT b.name FROM CampusBlock b WHERE UPPER(b.college) = UPPER(:college))")
+    @Query("DELETE FROM PdfFile p WHERE UPPER(p.blockLocation) = UPPER(:college) OR p.blockLocation IN (SELECT b.name FROM CampusBlock b WHERE UPPER(b.college) = UPPER(:college))")
     void deleteByCollege(@Param("college") String college);
 
     @Modifying

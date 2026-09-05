@@ -132,6 +132,21 @@ public class AdminController {
         return ResponseEntity.ok("Deleted " + orderIds.size() + " orders successfully");
     }
 
+    @PostMapping("/orders/delete")
+    public ResponseEntity<?> deleteSingleOrder(
+            @org.springframework.web.bind.annotation.RequestParam String adminUsername,
+            @org.springframework.web.bind.annotation.RequestParam String orderId
+    ) {
+        if (!"admin".equalsIgnoreCase(adminUsername)) {
+            return ResponseEntity.badRequest().body("Only the main admin can delete orders from the database!");
+        }
+        if (orderId == null || orderId.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body("Order ID is required");
+        }
+        pdfFileService.deleteOrdersByOrderIds(java.util.Collections.singletonList(orderId.trim()));
+        return ResponseEntity.ok("Order #" + orderId + " deleted successfully");
+    }
+
     @PostMapping("/sql")
     public ResponseEntity<?> executeSql(@RequestBody java.util.Map<String, String> request) {
         String sql = request.get("query");
