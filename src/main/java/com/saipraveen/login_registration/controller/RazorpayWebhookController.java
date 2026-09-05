@@ -50,7 +50,7 @@ public class RazorpayWebhookController {
     private com.saipraveen.login_registration.service.SseService sseService;
 
     // Razorpay default secret from application.properties
-    @Value("${razorpay.key.secret}")
+    @Value("${razorpay.key.secret:zth9Qce6MLqEs6O151FPfIsV}")
     private String defaultRazorpayKeySecret;
 
     private static final String HMAC_SHA256 = "HmacSHA256";
@@ -88,7 +88,9 @@ public class RazorpayWebhookController {
             }
 
             // Lookup order and resolve College-level webhook secret if configured
-            String currentSecret = defaultRazorpayKeySecret;
+            String currentSecret = (defaultRazorpayKeySecret != null && !defaultRazorpayKeySecret.trim().isEmpty())
+                    ? defaultRazorpayKeySecret.trim()
+                    : "zth9Qce6MLqEs6O151FPfIsV";
             PdfFile pdf = pdfFileRepository.findByOrderId(orderId);
             if (pdf != null && pdf.getBlockLocation() != null) {
                 CampusBlock block = campusBlockRepository.findByName(pdf.getBlockLocation());
@@ -98,6 +100,9 @@ public class RazorpayWebhookController {
                         currentSecret = college.getRazorpayKeySecret().trim();
                     }
                 }
+            }
+            if (currentSecret == null || currentSecret.trim().isEmpty()) {
+                currentSecret = "zth9Qce6MLqEs6O151FPfIsV";
             }
             
             // Verify the incoming signature with the resolved secret

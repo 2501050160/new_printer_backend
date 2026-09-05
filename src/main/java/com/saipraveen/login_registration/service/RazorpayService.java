@@ -24,10 +24,10 @@ public class RazorpayService {
 
     private static final Logger logger = LoggerFactory.getLogger(RazorpayService.class);
 
-    @Value("${razorpay.key.id}")
+    @Value("${razorpay.key.id:rzp_live_TOBWLIHZxellOE}")
     private String defaultKeyId;
 
-    @Value("${razorpay.key.secret}")
+    @Value("${razorpay.key.secret:zth9Qce6MLqEs6O151FPfIsV}")
     private String defaultKeySecret;
 
     @Autowired
@@ -65,32 +65,15 @@ public class RazorpayService {
                     logger.info("Using custom Razorpay keys for matched college: {} (key_id: {})", collegeName, currentKeyId);
                 }
             }
-
-            // Fallback: If no direct match or if current key is test, search all DB configs for a live key
-            if (currentKeyId == null || currentKeyId.startsWith("rzp_test") || currentKeyId.equals(defaultKeyId)) {
-                java.util.List<CollegeConfig> allConfigs = collegeConfigRepository.findAll();
-                // 1. Try to find a live key in DB configs
-                for (CollegeConfig cc : allConfigs) {
-                    if (cc.getRazorpayKeyId() != null && cc.getRazorpayKeyId().trim().startsWith("rzp_live")) {
-                        currentKeyId = cc.getRazorpayKeyId().trim();
-                        currentKeySecret = cc.getRazorpayKeySecret() != null ? cc.getRazorpayKeySecret().trim() : "";
-                        logger.info("Enforcing DB live credentials from college: {} (key_id: {})", cc.getCollegeName(), currentKeyId);
-                        break;
-                    }
-                }
-                // 2. If still not live, use any non-empty key in DB
-                if (currentKeyId.startsWith("rzp_test")) {
-                    for (CollegeConfig cc : allConfigs) {
-                        if (cc.getRazorpayKeyId() != null && !cc.getRazorpayKeyId().trim().isEmpty()) {
-                            currentKeyId = cc.getRazorpayKeyId().trim();
-                            currentKeySecret = cc.getRazorpayKeySecret() != null ? cc.getRazorpayKeySecret().trim() : "";
-                            break;
-                        }
-                    }
-                }
-            }
         } catch (Exception e) {
             logger.warn("Could not determine dynamic keys for appOrderId: {}, error: {}", appOrderId, e.getMessage());
+        }
+
+        if (currentKeyId == null || currentKeyId.trim().isEmpty()) {
+            currentKeyId = (defaultKeyId != null && !defaultKeyId.trim().isEmpty()) ? defaultKeyId : "rzp_live_TOBWLIHZxellOE";
+        }
+        if (currentKeySecret == null || currentKeySecret.trim().isEmpty()) {
+            currentKeySecret = (defaultKeySecret != null && !defaultKeySecret.trim().isEmpty()) ? defaultKeySecret : "zth9Qce6MLqEs6O151FPfIsV";
         }
 
         logger.info(">> Initializing RazorpayClient with Key ID: {} for appOrderId: {}", currentKeyId, appOrderId);
