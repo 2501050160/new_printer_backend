@@ -48,6 +48,9 @@ public class CollegeConfigController {
             if (request.getDedicatedBotEnabled() != null) {
                 existing.setDedicatedBotEnabled(request.getDedicatedBotEnabled());
             }
+            if (request.getWhatsappBotApiKey() != null) {
+                existing.setWhatsappBotApiKey(request.getWhatsappBotApiKey());
+            }
             return ResponseEntity.ok(collegeConfigRepository.save(existing));
         }
 
@@ -66,15 +69,19 @@ public class CollegeConfigController {
             ? ""
             : college.trim();
 
+        CollegeConfig config = col.isEmpty() ? null : collegeConfigRepository.findByCollegeNameIgnoreCase(col);
+        String botKey = (config != null && config.getWhatsappBotApiKey() != null) ? config.getWhatsappBotApiKey() : "";
         String botName = col.isEmpty() ? "Unified Cloud Print Bot" : (col + " Dedicated WhatsApp Bot");
         String jsonContent = String.format(
             "{\n" +
             "  \"targetCollege\": \"%s\",\n" +
+            "  \"botApiKey\": \"%s\",\n" +
             "  \"backendUrl\": \"https://printer-backend-kgzp.onrender.com\",\n" +
             "  \"frontendUrl\": \"https://cloudprint.website\",\n" +
             "  \"botName\": \"%s\"\n" +
             "}\n",
             col,
+            botKey,
             botName
         );
 
@@ -83,6 +90,50 @@ public class CollegeConfigController {
             .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"bot_config.json\"")
             .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
             .body(bytes);
+    }
+
+    @PostMapping("/generate-bot-key")
+    public ResponseEntity<?> generateBotKey(@RequestParam String college) {
+        String col = (college == null) ? "" : college.trim();
+        if (col.isEmpty()) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", "College name is required"));
+        }
+        CollegeConfig config = collegeConfigRepository.findByCollegeNameIgnoreCase(col);
+        if (config == null) {
+            config = new CollegeConfig();
+            config.setCollegeName(col);
+            config.setRazorpayKeyId("");
+            config.setRazorpayKeySecret("");
+        }
+        String cleanCol = col.replaceAll("[^a-zA-Z0-9]", "").toUpperCase();
+        String randomSuffix = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 12);
+        String generatedKey = "WA_KEY_" + cleanCol + "_" + randomSuffix;
+        config.setWhatsappBotApiKey(generatedKey);
+        config.setDedicatedBotEnabled(true);
+        collegeConfigRepository.save(config);
+        return ResponseEntity.ok(java.util.Map.of(
+            "college", col,
+            "botApiKey", generatedKey,
+            "status", "SUCCESS",
+            "message", "Dedicated WhatsApp Bot API key generated successfully"
+        ));
+    }
+
+    @GetMapping("/verify-bot-key")
+    public ResponseEntity<?> verifyBotKey(@RequestParam String key) {
+        if (key == null || key.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("valid", false, "error", "Missing key"));
+        }
+        CollegeConfig config = collegeConfigRepository.findByWhatsappBotApiKey(key.trim());
+        if (config != null) {
+            return ResponseEntity.ok(java.util.Map.of(
+                "valid", true,
+                "college", config.getCollegeName(),
+                "dedicatedBotEnabled", config.getDedicatedBotEnabled(),
+                "whatsappBotPhone", config.getWhatsappBotPhone() != null ? config.getWhatsappBotPhone() : ""
+            ));
+        }
+        return ResponseEntity.ok(java.util.Map.of("valid", false, "error", "Invalid or unregistered bot API key"));
     }
 
     @PostMapping("/bot-logout")

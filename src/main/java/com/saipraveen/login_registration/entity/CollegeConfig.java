@@ -108,4 +108,15 @@ public class CollegeConfig {
     public void setBotLogoutRequested(Boolean botLogoutRequested) {
         this.botLogoutRequested = botLogoutRequested;
     }
+
+    @Column(nullable = true)
+    private String whatsappBotApiKey;
+
+    public String getWhatsappBotApiKey() {
+        return whatsappBotApiKey;
+    }
+
+    public void setWhatsappBotApiKey(String whatsappBotApiKey) {
+        this.whatsappBotApiKey = whatsappBotApiKey;
+    }
 }

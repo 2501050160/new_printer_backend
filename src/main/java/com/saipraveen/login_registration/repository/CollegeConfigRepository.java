@@ -6,4 +6,5 @@ import com.saipraveen.login_registration.entity.CollegeConfig;
 public interface CollegeConfigRepository extends JpaRepository<CollegeConfig, Long> {
     CollegeConfig findByCollegeName(String collegeName);
     CollegeConfig findByCollegeNameIgnoreCase(String collegeName);
+    CollegeConfig findByWhatsappBotApiKey(String whatsappBotApiKey);
 }
