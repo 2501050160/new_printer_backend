@@ -343,7 +343,53 @@ public class BotPrintController {
         res.put("phoneNumber", cleanPhone);
         res.put("balance", balance);
         res.put("blocked", false);
+        res.put("college", (user != null && user.getCollege() != null) ? user.getCollege() : "KLU");
         return ResponseEntity.ok(res);
+    }
+
+    @org.springframework.web.bind.annotation.GetMapping("/latest-order")
+    public ResponseEntity<?> getLatestOrder(@RequestParam String phoneNumber) {
+        String cleanPhone = sanitizePhoneNumber(phoneNumber);
+        String waEmail = "wa_" + cleanPhone + "@whatsapp.cloudprint";
+        com.saipraveen.login_registration.entity.User user = userRepository.findByEmail(waEmail);
+        if (user == null) {
+            return ResponseEntity.notFound().build();
+        }
+        java.util.List<com.saipraveen.login_registration.entity.PdfFile> orders = pdfFileRepository.findByUserId(user.getId());
+        if (orders == null || orders.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        com.saipraveen.login_registration.entity.PdfFile latest = null;
+        for (int i = orders.size() - 1; i >= 0; i--) {
+            com.saipraveen.login_registration.entity.PdfFile p = orders.get(i);
+            if ("COMPLETED".equalsIgnoreCase(p.getStatus()) || "PRINTING".equalsIgnoreCase(p.getStatus()) || "PAID".equalsIgnoreCase(p.getPaymentStatus())) {
+                latest = p;
+                break;
+            }
+        }
+        if (latest == null) {
+            latest = orders.get(orders.size() - 1);
+        }
+        return ResponseEntity.ok(latest);
+    }
+
+    @PostMapping("/set-user-college")
+    public ResponseEntity<?> setUserCollege(@RequestParam String phoneNumber, @RequestParam String college) {
+        String cleanPhone = sanitizePhoneNumber(phoneNumber);
+        String waEmail = "wa_" + cleanPhone + "@whatsapp.cloudprint";
+        com.saipraveen.login_registration.entity.User user = userRepository.findByEmail(waEmail);
+        if (user == null) {
+            user = new com.saipraveen.login_registration.entity.User();
+            user.setName("Student (+91 " + cleanPhone + ")");
+            user.setEmail(waEmail);
+            user.setPassword("WA_BOT_USER_NOPASS");
+            user.setWalletBalance(0.0);
+            user.setReferralCode("WA_" + cleanPhone);
+            user.setBlocked(false);
+        }
+        user.setCollege(college.trim().toUpperCase());
+        userRepository.save(user);
+        return ResponseEntity.ok(Map.of("status", "SUCCESS", "college", user.getCollege()));
     }
 
     @PostMapping("/redeem-coupon")
