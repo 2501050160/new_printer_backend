@@ -110,6 +110,7 @@ public class CollegeConfigController {
         String generatedKey = "WA_KEY_" + cleanCol + "_" + randomSuffix;
         config.setWhatsappBotApiKey(generatedKey);
         config.setDedicatedBotEnabled(true);
+        config.setBotLogoutRequested(true);
         collegeConfigRepository.save(config);
         return ResponseEntity.ok(java.util.Map.of(
             "college", col,
@@ -160,6 +161,25 @@ public class CollegeConfigController {
     @GetMapping("/bot-status")
     public ResponseEntity<?> getBotStatus(@RequestParam(required = false) String college) {
         String col = (college == null) ? "" : college.trim();
+        if (col.isEmpty() || "ALL".equalsIgnoreCase(col) || "UNIFIED".equalsIgnoreCase(col)) {
+            java.util.List<CollegeConfig> allConfigs = collegeConfigRepository.findAll();
+            for (CollegeConfig c : allConfigs) {
+                if (Boolean.TRUE.equals(c.getBotLogoutRequested())) {
+                    return ResponseEntity.ok(java.util.Map.of(
+                        "college", c.getCollegeName() != null ? c.getCollegeName() : "",
+                        "logoutRequested", true,
+                        "dedicatedBotEnabled", Boolean.TRUE.equals(c.getDedicatedBotEnabled()),
+                        "whatsappBotPhone", c.getWhatsappBotPhone() != null ? c.getWhatsappBotPhone() : ""
+                    ));
+                }
+            }
+            return ResponseEntity.ok(java.util.Map.of(
+                "college", "UNIFIED",
+                "logoutRequested", false,
+                "dedicatedBotEnabled", false,
+                "whatsappBotPhone", ""
+            ));
+        }
         CollegeConfig config = collegeConfigRepository.findByCollegeNameIgnoreCase(col);
         boolean logoutRequested = config != null && Boolean.TRUE.equals(config.getBotLogoutRequested());
         return ResponseEntity.ok(java.util.Map.of(
@@ -173,6 +193,16 @@ public class CollegeConfigController {
     @PostMapping("/bot-ack-logout")
     public ResponseEntity<?> ackBotLogout(@RequestParam String college) {
         String col = (college == null) ? "" : college.trim();
+        if (col.isEmpty() || "ALL".equalsIgnoreCase(col) || "UNIFIED".equalsIgnoreCase(col)) {
+            java.util.List<CollegeConfig> allConfigs = collegeConfigRepository.findAll();
+            for (CollegeConfig c : allConfigs) {
+                if (Boolean.TRUE.equals(c.getBotLogoutRequested())) {
+                    c.setBotLogoutRequested(false);
+                    collegeConfigRepository.save(c);
+                }
+            }
+            return ResponseEntity.ok(java.util.Map.of("status", "ACKNOWLEDGED"));
+        }
         CollegeConfig config = collegeConfigRepository.findByCollegeNameIgnoreCase(col);
         if (config != null) {
             config.setBotLogoutRequested(false);
