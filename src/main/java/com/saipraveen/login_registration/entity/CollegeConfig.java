@@ -97,4 +97,15 @@ public class CollegeConfig {
     public void setDedicatedBotEnabled(Boolean dedicatedBotEnabled) {
         this.dedicatedBotEnabled = dedicatedBotEnabled;
     }
+
+    @Column(nullable = true)
+    private Boolean botLogoutRequested = false;
+
+    public Boolean getBotLogoutRequested() {
+        return botLogoutRequested != null && botLogoutRequested;
+    }
+
+    public void setBotLogoutRequested(Boolean botLogoutRequested) {
+        this.botLogoutRequested = botLogoutRequested;
+    }
 }

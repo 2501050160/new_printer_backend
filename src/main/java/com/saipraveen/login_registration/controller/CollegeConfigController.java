@@ -84,4 +84,49 @@ public class CollegeConfigController {
             .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
             .body(bytes);
     }
+
+    @PostMapping("/bot-logout")
+    public ResponseEntity<?> requestBotLogout(@RequestParam String college) {
+        String col = (college == null) ? "" : college.trim();
+        CollegeConfig config = collegeConfigRepository.findByCollegeNameIgnoreCase(col);
+        if (config != null) {
+            config.setBotLogoutRequested(true);
+            config.setDedicatedBotEnabled(false);
+            collegeConfigRepository.save(config);
+            return ResponseEntity.ok(java.util.Map.of("message", "Bot logout requested for " + col, "status", "SUCCESS"));
+        } else {
+            CollegeConfig newConfig = new CollegeConfig();
+            newConfig.setCollegeName(col);
+            newConfig.setRazorpayKeyId("");
+            newConfig.setRazorpayKeySecret("");
+            newConfig.setBotLogoutRequested(true);
+            newConfig.setDedicatedBotEnabled(false);
+            collegeConfigRepository.save(newConfig);
+            return ResponseEntity.ok(java.util.Map.of("message", "Bot logout requested for " + col, "status", "SUCCESS"));
+        }
+    }
+
+    @GetMapping("/bot-status")
+    public ResponseEntity<?> getBotStatus(@RequestParam(required = false) String college) {
+        String col = (college == null) ? "" : college.trim();
+        CollegeConfig config = collegeConfigRepository.findByCollegeNameIgnoreCase(col);
+        boolean logoutRequested = config != null && Boolean.TRUE.equals(config.getBotLogoutRequested());
+        return ResponseEntity.ok(java.util.Map.of(
+            "college", col,
+            "logoutRequested", logoutRequested,
+            "dedicatedBotEnabled", config != null && Boolean.TRUE.equals(config.getDedicatedBotEnabled()),
+            "whatsappBotPhone", (config != null && config.getWhatsappBotPhone() != null) ? config.getWhatsappBotPhone() : ""
+        ));
+    }
+
+    @PostMapping("/bot-ack-logout")
+    public ResponseEntity<?> ackBotLogout(@RequestParam String college) {
+        String col = (college == null) ? "" : college.trim();
+        CollegeConfig config = collegeConfigRepository.findByCollegeNameIgnoreCase(col);
+        if (config != null) {
+            config.setBotLogoutRequested(false);
+            collegeConfigRepository.save(config);
+        }
+        return ResponseEntity.ok(java.util.Map.of("status", "ACKNOWLEDGED"));
+    }
 }
