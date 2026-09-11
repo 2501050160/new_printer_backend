@@ -51,6 +51,30 @@ public class CollegeConfigController {
             if (request.getWhatsappBotApiKey() != null) {
                 existing.setWhatsappBotApiKey(request.getWhatsappBotApiKey());
             }
+            if (request.getBankAccountNumber() != null) {
+                existing.setBankAccountNumber(request.getBankAccountNumber());
+            }
+            if (request.getBankIfsc() != null) {
+                existing.setBankIfsc(request.getBankIfsc());
+            }
+            if (request.getBankBeneficiaryName() != null) {
+                existing.setBankBeneficiaryName(request.getBankBeneficiaryName());
+            }
+            if (request.getRazorpayAccountId() != null) {
+                existing.setRazorpayAccountId(request.getRazorpayAccountId());
+            }
+            if (request.getSettlementEmail() != null) {
+                existing.setSettlementEmail(request.getSettlementEmail());
+            }
+            if (request.getAutoPayoutEnabled() != null) {
+                existing.setAutoPayoutEnabled(request.getAutoPayoutEnabled());
+            }
+            if (request.getAutoPayoutThreshold() != null) {
+                existing.setAutoPayoutThreshold(request.getAutoPayoutThreshold());
+            }
+            if (request.getAutoPayoutSchedule() != null) {
+                existing.setAutoPayoutSchedule(request.getAutoPayoutSchedule());
+            }
             return ResponseEntity.ok(collegeConfigRepository.save(existing));
         }
 

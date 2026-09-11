@@ -119,4 +119,93 @@ public class CollegeConfig {
     public void setWhatsappBotApiKey(String whatsappBotApiKey) {
         this.whatsappBotApiKey = whatsappBotApiKey;
     }
+
+    @Column(nullable = true)
+    private String bankAccountNumber;
+
+    @Column(nullable = true)
+    private String bankIfsc;
+
+    @Column(nullable = true)
+    private String bankBeneficiaryName;
+
+    @Column(nullable = true)
+    private String razorpayAccountId; // Razorpay Route Linked Account ID (e.g. acc_xxxxxx)
+
+    public String getBankAccountNumber() {
+        return bankAccountNumber;
+    }
+
+    public void setBankAccountNumber(String bankAccountNumber) {
+        this.bankAccountNumber = bankAccountNumber;
+    }
+
+    public String getBankIfsc() {
+        return bankIfsc;
+    }
+
+    public void setBankIfsc(String bankIfsc) {
+        this.bankIfsc = bankIfsc;
+    }
+
+    public String getBankBeneficiaryName() {
+        return bankBeneficiaryName;
+    }
+
+    public void setBankBeneficiaryName(String bankBeneficiaryName) {
+        this.bankBeneficiaryName = bankBeneficiaryName;
+    }
+
+    public String getRazorpayAccountId() {
+        return razorpayAccountId;
+    }
+
+    public void setRazorpayAccountId(String razorpayAccountId) {
+        this.razorpayAccountId = razorpayAccountId;
+    }
+
+    @Column(nullable = true)
+    private String settlementEmail;
+
+    @Column(nullable = true)
+    private Boolean autoPayoutEnabled = false;
+
+    @Column(nullable = true)
+    private Double autoPayoutThreshold = 2000.0;
+
+    @Column(nullable = true)
+    private String autoPayoutSchedule = "THRESHOLD_IMMEDIATE";
+
+    public String getSettlementEmail() {
+        return settlementEmail;
+    }
+
+    public void setSettlementEmail(String settlementEmail) {
+        this.settlementEmail = settlementEmail;
+    }
+
+    public Boolean getAutoPayoutEnabled() {
+        return autoPayoutEnabled != null && autoPayoutEnabled;
+    }
+
+    public void setAutoPayoutEnabled(Boolean autoPayoutEnabled) {
+        this.autoPayoutEnabled = autoPayoutEnabled;
+    }
+
+    public Double getAutoPayoutThreshold() {
+        return autoPayoutThreshold != null ? autoPayoutThreshold : 2000.0;
+    }
+
+    public void setAutoPayoutThreshold(Double autoPayoutThreshold) {
+        this.autoPayoutThreshold = autoPayoutThreshold;
+    }
+
+    public String getAutoPayoutSchedule() {
+        return autoPayoutSchedule != null ? autoPayoutSchedule : "THRESHOLD_IMMEDIATE";
+    }
+
+    public void setAutoPayoutSchedule(String autoPayoutSchedule) {
+        this.autoPayoutSchedule = autoPayoutSchedule;
+    }
 }
+
