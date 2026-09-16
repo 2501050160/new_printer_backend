@@ -46,10 +46,24 @@ public class PricingController {
     public ResponseEntity<?> updatePrice(
             @RequestParam String printType,
             @RequestParam Double pricePerPage,
-            @RequestParam String blockLocation
+            @RequestParam(required = false) Double firstPagePrice,
+            @RequestParam String blockLocation,
+            @RequestParam(required = false) String adminRole,
+            @RequestParam(required = false) String adminCollege
     ) {
+        // Enforce sub-admin access control:
+        if (adminRole != null && ("SUB_ADMIN".equalsIgnoreCase(adminRole.trim()) || "MANAGER".equalsIgnoreCase(adminRole.trim()))) {
+            if (adminCollege != null && !adminCollege.trim().isEmpty() && !"ALL".equalsIgnoreCase(adminCollege.trim())) {
+                com.saipraveen.login_registration.entity.CampusBlock block = campusBlockRepository.findByName(blockLocation);
+                if (block != null && block.getCollege() != null && !block.getCollege().equalsIgnoreCase(adminCollege.trim())) {
+                    return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN)
+                            .body("Access denied: Sub-admin of " + adminCollege + " cannot modify prices for block '" + blockLocation + "' (" + block.getCollege() + ")");
+                }
+            }
+        }
+
         return ResponseEntity.ok(
-                service.updatePrice(printType, pricePerPage, blockLocation)
+                service.updatePrice(printType, pricePerPage, firstPagePrice, blockLocation)
         );
     }
 
@@ -60,6 +74,16 @@ public class PricingController {
     ) {
         return ResponseEntity.ok(
                 service.getPrice(printType, blockLocation)
+        );
+    }
+
+    @GetMapping("/firstPagePrice")
+    public ResponseEntity<?> getFirstPagePrice(
+            @RequestParam String printType,
+            @RequestParam String blockLocation
+    ) {
+        return ResponseEntity.ok(
+                service.getFirstPagePrice(printType, blockLocation)
         );
     }
 

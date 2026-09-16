@@ -59,24 +59,28 @@ public class DataInitializer implements CommandLineRunner {
                     Pricing bw1 = new Pricing();
                     bw1.setPrintType("Black & White");
                     bw1.setPricePerPage(2.0);
+                    bw1.setFirstPagePrice(2.0);
                     bw1.setBlockLocation("Central Library");
                     pricingRepository.save(bw1);
 
                     Pricing col1 = new Pricing();
                     col1.setPrintType("Color");
                     col1.setPricePerPage(5.0);
+                    col1.setFirstPagePrice(5.0);
                     col1.setBlockLocation("Central Library");
                     pricingRepository.save(col1);
 
                     Pricing bw2 = new Pricing();
                     bw2.setPrintType("Black & White");
                     bw2.setPricePerPage(2.0);
+                    bw2.setFirstPagePrice(2.0);
                     bw2.setBlockLocation("CSE Block (Ground Floor)");
                     pricingRepository.save(bw2);
 
                     Pricing col2 = new Pricing();
                     col2.setPrintType("Color");
                     col2.setPricePerPage(5.0);
+                    col2.setFirstPagePrice(5.0);
                     col2.setBlockLocation("CSE Block (Ground Floor)");
                     pricingRepository.save(col2);
                 }

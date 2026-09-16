@@ -26,9 +26,9 @@ public class PricingService {
                     if (campusBlockRepository.findByName(block) == null) {
                         campusBlockRepository.save(new com.saipraveen.login_registration.entity.CampusBlock(block));
                     }
-                    initializeBlockPrice(block, "BW", 2.0);
-                    initializeBlockPrice(block, "COLOR", 5.0);
-                    initializeBlockPrice(block, "DUPLEX", 2.0);
+                    initializeBlockPrice(block, "BW", 2.0, 2.0);
+                    initializeBlockPrice(block, "COLOR", 5.0, 5.0);
+                    initializeBlockPrice(block, "DUPLEX", 2.0, 2.0);
                 }
             } catch (Exception e) {
                 System.err.println("Warning: Default pricing initialization deferred: " + e.getMessage());
@@ -36,14 +36,21 @@ public class PricingService {
         });
     }
 
-    private void initializeBlockPrice(String block, String printType, Double price) {
+    private void initializeBlockPrice(String block, String printType, Double price, Double firstPagePrice) {
         List<Pricing> existing = pricingRepository.findAllByPrintTypeAndBlockLocation(printType, block);
         if (existing == null || existing.isEmpty()) {
             Pricing pricing = new Pricing();
             pricing.setBlockLocation(block);
             pricing.setPrintType(printType);
             pricing.setPricePerPage(price);
+            pricing.setFirstPagePrice(firstPagePrice != null ? firstPagePrice : price);
             pricingRepository.save(pricing);
+        } else {
+            Pricing pricing = existing.get(0);
+            if (pricing.getFirstPagePrice() == null) {
+                pricing.setFirstPagePrice(firstPagePrice != null ? firstPagePrice : pricing.getPricePerPage());
+                pricingRepository.save(pricing);
+            }
         }
     }
 
@@ -56,6 +63,10 @@ public class PricingService {
     }
 
     public Pricing updatePrice(String printType, Double pricePerPage, String blockLocation) {
+        return updatePrice(printType, pricePerPage, null, blockLocation);
+    }
+
+    public Pricing updatePrice(String printType, Double pricePerPage, Double firstPagePrice, String blockLocation) {
         List<Pricing> list = pricingRepository.findAllByPrintTypeAndBlockLocation(printType, blockLocation);
         Pricing pricing;
         if (list != null && !list.isEmpty()) {
@@ -69,6 +80,11 @@ public class PricingService {
             pricing.setBlockLocation(blockLocation);
         }
         pricing.setPricePerPage(pricePerPage);
+        if (firstPagePrice != null && firstPagePrice > 0) {
+            pricing.setFirstPagePrice(firstPagePrice);
+        } else if (pricing.getFirstPagePrice() == null) {
+            pricing.setFirstPagePrice(pricePerPage);
+        }
         return pricingRepository.save(pricing);
     }
 
@@ -82,5 +98,31 @@ public class PricingService {
             return global.get(0).getPricePerPage();
         }
         return 0.0;
+    }
+
+    public Double getFirstPagePrice(String printType, String blockLocation) {
+        List<Pricing> list = pricingRepository.findAllByPrintTypeAndBlockLocation(printType, blockLocation);
+        if (list != null && !list.isEmpty()) {
+            Double first = list.get(0).getFirstPagePrice();
+            if (first != null && first > 0) {
+                return first;
+            }
+            Double pagePrice = list.get(0).getPricePerPage();
+            if (pagePrice != null && pagePrice > 0) {
+                return pagePrice;
+            }
+        }
+        java.util.List<Pricing> global = pricingRepository.findByPrintType(printType);
+        if (global != null && !global.isEmpty()) {
+            Double first = global.get(0).getFirstPagePrice();
+            if (first != null && first > 0) {
+                return first;
+            }
+            Double pagePrice = global.get(0).getPricePerPage();
+            if (pagePrice != null && pagePrice > 0) {
+                return pagePrice;
+            }
+        }
+        return getPrice(printType, blockLocation);
     }
 }

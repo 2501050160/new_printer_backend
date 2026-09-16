@@ -81,8 +81,9 @@ public class CampusBlockController {
         CampusBlock block = repository.save(newBlock);
         
         // Auto-initialize prices for the new block so that we can price orders
-        pricingService.updatePrice("BW", 2.0, trimmed);
-        pricingService.updatePrice("COLOR", 5.0, trimmed);
+        pricingService.updatePrice("BW", 2.0, 2.0, trimmed);
+        pricingService.updatePrice("COLOR", 5.0, 5.0, trimmed);
+        pricingService.updatePrice("DUPLEX", 2.0, 2.0, trimmed);
         
         return ResponseEntity.ok(block);
     }

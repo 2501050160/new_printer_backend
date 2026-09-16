@@ -523,10 +523,18 @@ public class BotPrintController {
         }
         Double bwRate = pricingService.getPrice("BW", targetBlock);
         if (bwRate == null || bwRate == 0.0) bwRate = 2.0;
+        Double bwFirstRate = pricingService.getFirstPagePrice("BW", targetBlock);
+        if (bwFirstRate == null || bwFirstRate == 0.0) bwFirstRate = bwRate;
+
         Double colorRate = pricingService.getPrice("COLOR", targetBlock);
         if (colorRate == null || colorRate == 0.0) colorRate = 5.0;
+        Double colorFirstRate = pricingService.getFirstPagePrice("COLOR", targetBlock);
+        if (colorFirstRate == null || colorFirstRate == 0.0) colorFirstRate = colorRate;
+
         Double duplexRate = pricingService.getPrice("DUPLEX", targetBlock);
         if (duplexRate == null || duplexRate == 0.0) duplexRate = 2.0;
+        Double duplexFirstRate = pricingService.getFirstPagePrice("DUPLEX", targetBlock);
+        if (duplexFirstRate == null || duplexFirstRate == 0.0) duplexFirstRate = duplexRate;
 
         boolean offpeakEnabled = systemSettingService.getSettingBool("offpeak_enabled_" + college, systemSettingService.getSettingBool("offpeak_enabled", true));
         double offpeakDiscountPercent = systemSettingService.getSettingDouble("offpeak_discount_percent_" + college, systemSettingService.getSettingDouble("offpeak_discount_percent", 15.0));
@@ -539,8 +547,11 @@ public class BotPrintController {
         res.put("college", college);
         res.put("blockLocation", targetBlock);
         res.put("bwPricePerPage", bwRate);
+        res.put("bwFirstPagePrice", bwFirstRate);
         res.put("colorPricePerPage", colorRate);
+        res.put("colorFirstPagePrice", colorFirstRate);
         res.put("duplexPricePerPage", duplexRate);
+        res.put("duplexFirstPagePrice", duplexFirstRate);
         res.put("offpeakEnabled", offpeakEnabled);
         res.put("offpeakDiscountPercent", offpeakDiscountPercent);
         res.put("thesisEnabled", thesisEnabled);
@@ -550,9 +561,21 @@ public class BotPrintController {
         StringBuilder info = new StringBuilder();
         info.append("🏫 *Print Rates for ").append(college).append(" Campus*\n");
         info.append("-----------------------------\n");
-        info.append("📄 *B&W Print*: ₹").append(String.format("%.2f", bwRate)).append("/page\n");
-        info.append("🎨 *Color Print*: ₹").append(String.format("%.2f", colorRate)).append("/page\n");
-        info.append("🔄 *Double-Sided (Duplex)*: ₹").append(String.format("%.2f", duplexRate)).append("/page\n");
+        if (bwFirstRate != null && !bwFirstRate.equals(bwRate)) {
+            info.append("📄 *B&W Print*: ₹").append(String.format("%.2f", bwFirstRate)).append(" (1st page), then ₹").append(String.format("%.2f", bwRate)).append("/page\n");
+        } else {
+            info.append("📄 *B&W Print*: ₹").append(String.format("%.2f", bwRate)).append("/page\n");
+        }
+        if (colorFirstRate != null && !colorFirstRate.equals(colorRate)) {
+            info.append("🎨 *Color Print*: ₹").append(String.format("%.2f", colorFirstRate)).append(" (1st page), then ₹").append(String.format("%.2f", colorRate)).append("/page\n");
+        } else {
+            info.append("🎨 *Color Print*: ₹").append(String.format("%.2f", colorRate)).append("/page\n");
+        }
+        if (duplexFirstRate != null && !duplexFirstRate.equals(duplexRate)) {
+            info.append("🔄 *Double-Sided (Duplex)*: ₹").append(String.format("%.2f", duplexFirstRate)).append(" (1st sheet), then ₹").append(String.format("%.2f", duplexRate)).append("/sheet\n");
+        } else {
+            info.append("🔄 *Double-Sided (Duplex)*: ₹").append(String.format("%.2f", duplexRate)).append("/page\n");
+        }
         if (offpeakEnabled) {
             info.append("🌙 *Off-Peak Hours*: ").append(offpeakDiscountPercent).append("% OFF active during night/morning windows\n");
         }

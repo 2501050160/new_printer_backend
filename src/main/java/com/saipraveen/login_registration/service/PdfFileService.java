@@ -363,20 +363,36 @@ public PdfFile updateOrder(
     }
 
     Double rate = null;
+    Double firstPageRate = null;
     if (Boolean.TRUE.equals(doubleSided)) {
         rate = pricingService.getPrice("DUPLEX", pdf.getBlockLocation());
+        firstPageRate = pricingService.getFirstPagePrice("DUPLEX", pdf.getBlockLocation());
         if (rate == null || rate == 0.0) {
             rate = pricingService.getPrice("BW_DUPLEX", pdf.getBlockLocation());
+            firstPageRate = pricingService.getFirstPagePrice("BW_DUPLEX", pdf.getBlockLocation());
         }
     }
     if (rate == null || rate == 0.0) {
         rate = pricingService.getPrice(printType, pdf.getBlockLocation());
+        firstPageRate = pricingService.getFirstPagePrice(printType, pdf.getBlockLocation());
     }
     if (rate == null || rate == 0.0) {
         rate = "COLOR".equalsIgnoreCase(printType) ? 5.0 : 2.0;
     }
+    if (firstPageRate == null || firstPageRate <= 0.0) {
+        firstPageRate = rate;
+    }
 
-    double basePrice = paperSheets * copies * rate;
+    int copiesCount = (copies != null && copies > 0) ? copies : 1;
+    double singleCopyCost;
+    if ("COLOR".equalsIgnoreCase(printType)) {
+        singleCopyCost = paperSheets * rate;
+    } else if (paperSheets <= 1) {
+        singleCopyCost = paperSheets * firstPageRate;
+    } else {
+        singleCopyCost = firstPageRate + (paperSheets - 1) * rate;
+    }
+    double basePrice = singleCopyCost * copiesCount;
 
     // 1. Off-peak Dynamic Discount
     String college = "KLU";
